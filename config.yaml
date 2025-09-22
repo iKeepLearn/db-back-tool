@@ -14,3 +14,8 @@ postgresql:
   port: 5432
   username: "postgres"
   password: "postgres"
+mysql:
+  host: "localhost"
+  port: 3306
+  username: "root"
+  password: "password"

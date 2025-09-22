@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
         Commands::Backup { database_name } => {
             info!("Starting backup for database: {}", database_name);
             backup_database(
-                db,
+                db.as_ref(),
                 &database_name,
                 &app_config.get_backup_dir(),
                 &app_config.compress_password,
@@ -64,8 +64,8 @@ async fn main() -> Result<()> {
     }
 }
 
-async fn backup_database<Db: Database>(
-    db: Db,
+async fn backup_database(
+    db: &dyn Database,
     database_name: &str,
     back_dir: &PathBuf,
     password: &str,

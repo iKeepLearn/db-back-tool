@@ -1,5 +1,5 @@
-use crate::database::postgresql::PostgreSql;
 use crate::database::Database;
+use crate::database::{mysql::MySql, postgresql::PostgreSql};
 use crate::storage::tencent_cos::TencentCos;
 use crate::storage::Storage;
 use crate::utils::resolve_path;
@@ -12,6 +12,7 @@ pub struct AllConfig {
     pub app: AppConfig,
     pub tencent_cos: TencentCosConfig,
     pub postgresql: PostgreSqlConfig,
+    pub mysql: MySqlConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -39,10 +40,20 @@ pub struct PostgreSqlConfig {
     pub password: String,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct MySqlConfig {
+    pub host: String,
+    pub port: u16,
+    pub username: String,
+    pub password: String,
+}
+
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub enum DbType {
     #[serde(rename = "postgresql")]
     Postgresql,
+    #[serde(rename = "mysql")]
+    MySql,
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq)]
@@ -75,11 +86,15 @@ impl AppConfig {
             Err(_) => AppConfig::default().backup_dir.into(),
         }
     }
-    pub fn database(&self, config: &AllConfig) -> impl Database {
+    pub fn database(&self, config: &AllConfig) -> Box<dyn Database> {
         match self.db_type {
             DbType::Postgresql => {
-                let db = PostgreSql::new(&config.postgresql);
-                db
+                let postgresql = PostgreSql::new(&config.postgresql);
+                Box::new(postgresql)
+            }
+            DbType::MySql => {
+                let mysql = MySql::new(&config.mysql);
+                Box::new(mysql)
             }
         }
     }

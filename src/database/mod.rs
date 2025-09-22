@@ -1,4 +1,5 @@
 pub mod postgresql;
+pub mod mysql;
 
 use std::path::PathBuf;
 

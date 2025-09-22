@@ -31,7 +31,6 @@ sudo apt install p7zip-full
 - 替换 `/path/to/config.yaml` 为实际配置文件路径
 - 替换 `database_name` 为需要备份的数据库名称
 
----
 
 ### 上传任务
 
@@ -42,7 +41,6 @@ sudo apt install p7zip-full
 ```
 - 替换路径为实际路径
 
----
 
 ### 删除任务
 
