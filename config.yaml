@@ -1,0 +1,16 @@
+app:
+  backup_dir: "backup_dir"
+  db_type: "postgresql"
+  cos_provider: "tencent_cos"
+  cos_path: "db/"
+  compress_password: "password"
+tencent_cos:
+  secret_id: "AKIDuhLs"
+  secret_key: "dGnCj8"
+  region: "ap-shanghai"
+  bucket: "bucket-1234567"
+postgresql:
+  host: "localhost"
+  port: 5432
+  username: "postgres"
+  password: "postgres"
