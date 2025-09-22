@@ -1,4 +1,7 @@
 // src/config.rs
+use crate::database::postgresql::PostgreSql;
+use crate::database::Database;
+use crate::utils::resolve_path;
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
 use std::path::PathBuf;
@@ -65,7 +68,19 @@ impl Default for AppConfig {
 
 impl AppConfig {
     pub fn get_backup_dir(&self) -> PathBuf {
-        PathBuf::from(&self.backup_dir)
+        let path = resolve_path(&self.backup_dir);
+        match path {
+            Ok(p) => p,
+            Err(_) => AppConfig::default().backup_dir.into(),
+        }
+    }
+    pub fn database(&self, config: &AllConfig) -> impl Database {
+        match self.db_type {
+            DbType::Postgresql => {
+                let db = PostgreSql::new(&config.postgresql);
+                db
+            }
+        }
     }
 }
 
