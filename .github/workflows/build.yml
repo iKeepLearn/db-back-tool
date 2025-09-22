@@ -1,0 +1,76 @@
+name: Build and Release
+
+on:
+  push:
+    # branches: [master]
+    tags:
+      - "v*"
+  pull_request:
+    branches: [master]
+
+env:
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true
+  APP_NAME: backupdbtool
+
+permissions:
+  contents: write
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      # - name: Install musl target
+      #   run: rustup target add x86_64-unknown-linux-musl
+
+      - name: Cache Cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build release
+        # run: cargo build --release --target x86_64-unknown-linux-musl
+        run: cargo build --release
+
+      - name: Rename executable for clarity
+        run: mv target/release/${{ env.APP_NAME }} .
+
+      - name: Create ZIP file
+        run: |
+          zip -r ${{ env.APP_NAME }}-linux-x86_64.zip ${{ env.APP_NAME }} config.yaml
+
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }} # 使用当前的 Tag 名称作为 Release 名称
+          name: ${{ github.ref_name }}
+          draft: false # 设置为 true 可以创建草稿 Release
+          prerelease: false # 设置为 true 可以创建预发布 Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # GitHub 自动提供的 token
+
+      - name: Upload Release Asset (Linux)
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # 获取上一步创建的 Release 的上传 URL
+          asset_path: ./${{ env.APP_NAME }}-linux-x86_64.zip # 要上传的文件路径
+          asset_name: ${{ env.APP_NAME }}-linux-x86_64.zip # 上传后的文件名称
+          asset_content_type: application/zip # 文件的 MIME 类型
