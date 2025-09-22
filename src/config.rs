@@ -1,6 +1,7 @@
-// src/config.rs
 use crate::database::postgresql::PostgreSql;
 use crate::database::Database;
+use crate::storage::tencent_cos::TencentCos;
+use crate::storage::Storage;
 use crate::utils::resolve_path;
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
@@ -79,6 +80,15 @@ impl AppConfig {
             DbType::Postgresql => {
                 let db = PostgreSql::new(&config.postgresql);
                 db
+            }
+        }
+    }
+    pub fn storage(&self, config: &AllConfig) -> impl Storage {
+        match self.cos_provider {
+            CosProvider::TencentCos => {
+                let config = &config.tencent_cos;
+                let storage = TencentCos::new(config);
+                storage
             }
         }
     }

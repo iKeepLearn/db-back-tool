@@ -1,6 +1,6 @@
 [package]
 name = "backupdbtool"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 
 [lib]
@@ -29,6 +29,7 @@ quickxml_to_serde = "0.6"
 tabled = "0.20"
 reqwest = { version = "0.12", features = ["json"] }
 shellexpand = "3.1"
+humansize = "2.1"
 # sevenz-rust2 = "0.18"
 
 [dev-dependencies]
