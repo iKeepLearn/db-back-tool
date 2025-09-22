@@ -19,3 +19,8 @@ mysql:
   port: 3306
   username: "root"
   password: "password"
+aliyun_oss:
+  secret_id: "AKIDuhLs"
+  secret_key: "dGnCj8"
+  end_point: "oss-cn-shanghai.aliyuncs.com"
+  bucket: "bucket-1234567"

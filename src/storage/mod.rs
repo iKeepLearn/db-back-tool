@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use tabled::Tabled;
 
 pub mod tencent_cos;
+pub mod aliyun_oss;
 
 #[async_trait::async_trait]
 pub trait Storage {

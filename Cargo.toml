@@ -30,6 +30,7 @@ tabled = "0.20"
 reqwest = { version = "0.12", features = ["json"] }
 shellexpand = "3.1"
 humansize = "2.1"
+aliyun-oss-rs = { version = "0.1.1" }
 # sevenz-rust2 = "0.18"
 
 [dev-dependencies]

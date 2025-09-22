@@ -42,12 +42,12 @@ async fn main() -> Result<()> {
         }
         Commands::Upload { file, all } => {
             info!("Starting upload to COS");
-            upload_to_cos(file, all, &app_config, &storage).await
+            upload_to_cos(file, all, &app_config, storage.as_ref()).await
         }
         Commands::Delete { key, all } => {
             info!("Starting delete yesterday before file from  COS");
             utils::cleanup_old_backups(&app_config.get_backup_dir()).await?;
-            delete_from_cos(key, all, &storage).await
+            delete_from_cos(key, all, storage.as_ref()).await
         }
         Commands::List => {
             let files: Vec<CosItem> = storage
@@ -90,11 +90,11 @@ async fn backup_database(
     Ok(())
 }
 
-async fn upload_to_cos<S: Storage>(
+async fn upload_to_cos(
     file: Option<String>,
     all: bool,
     config: &AppConfig,
-    storage: &S,
+    storage: &dyn Storage,
 ) -> Result<()> {
     if let Some(file_path) = file {
         // 上传单个文件
@@ -120,7 +120,7 @@ async fn upload_to_cos<S: Storage>(
     Ok(())
 }
 
-async fn delete_from_cos<S: Storage>(key: Option<String>, all: bool, storage: &S) -> Result<()> {
+async fn delete_from_cos(key: Option<String>, all: bool, storage: &dyn Storage) -> Result<()> {
     if let Some(key_str) = key {
         storage.delete(&key_str).await.map_err(anyhow::Error::msg)?;
         info!("File deleted successfully: {}", key_str);

@@ -38,9 +38,9 @@ pub fn is_yesterday_before(date: DateTime<Utc>) -> bool {
     }
 }
 
-pub async fn upload_all_backups<S: Storage>(
+pub async fn upload_all_backups(
     backup_dir: &PathBuf,
-    storage: &S,
+    storage: &dyn Storage,
     cos_path: &str,
 ) -> Result<(), String> {
     let pattern = backup_dir.join("*.7z").to_string_lossy().to_string();

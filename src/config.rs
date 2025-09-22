@@ -1,5 +1,6 @@
 use crate::database::Database;
 use crate::database::{mysql::MySql, postgresql::PostgreSql};
+use crate::storage::aliyun_oss::AliyunOss;
 use crate::storage::tencent_cos::TencentCos;
 use crate::storage::Storage;
 use crate::utils::resolve_path;
@@ -13,6 +14,7 @@ pub struct AllConfig {
     pub tencent_cos: TencentCosConfig,
     pub postgresql: PostgreSqlConfig,
     pub mysql: MySqlConfig,
+    pub aliyun_oss: AliyunOssConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -29,6 +31,14 @@ pub struct TencentCosConfig {
     pub secret_id: String,
     pub secret_key: String,
     pub region: String,
+    pub bucket: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct AliyunOssConfig {
+    pub secret_id: String,
+    pub secret_key: String,
+    pub end_point: String,
     pub bucket: String,
 }
 
@@ -60,6 +70,8 @@ pub enum DbType {
 pub enum CosProvider {
     #[serde(rename = "tencent_cos")]
     TencentCos,
+    #[serde(rename = "aliyun_oss")]
+    AliyunOss,
 }
 
 impl Default for AppConfig {
@@ -98,12 +110,17 @@ impl AppConfig {
             }
         }
     }
-    pub fn storage(&self, config: &AllConfig) -> impl Storage {
+    pub fn storage(&self, config: &AllConfig) -> Box<dyn Storage> {
         match self.cos_provider {
             CosProvider::TencentCos => {
                 let config = &config.tencent_cos;
                 let storage = TencentCos::new(config);
-                storage
+                Box::new(storage)
+            }
+            CosProvider::AliyunOss => {
+                let config = &config.aliyun_oss;
+                let storage = AliyunOss::new(config);
+                Box::new(storage)
             }
         }
     }
