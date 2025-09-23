@@ -6,7 +6,6 @@ use humansize::{format_size, DECIMAL};
 use qcos::client::Client;
 use qcos::request::ErrNo;
 use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
 use std::path::PathBuf;
 use tracing::info;
 
@@ -33,26 +32,6 @@ impl From<TencentCosItem> for CosItem {
 
 pub struct TencentCos {
     pub client: Client,
-}
-
-impl PartialEq for CosItem {
-    fn eq(&self, other: &Self) -> bool {
-        self.last_modified == other.last_modified
-    }
-}
-
-impl Eq for CosItem {}
-
-impl PartialOrd for CosItem {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for CosItem {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.last_modified.cmp(&other.last_modified)
-    }
 }
 
 #[async_trait::async_trait]

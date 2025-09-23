@@ -166,7 +166,7 @@ dependencies = [
 
 [[package]]
 name = "backupdbtool"
-version = "1.1.1"
+version = "1.1.2"
 dependencies = [
  "aliyun-oss-rs",
  "anyhow",

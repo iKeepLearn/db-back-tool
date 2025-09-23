@@ -1,11 +1,12 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
 use std::path::PathBuf;
 use tabled::Tabled;
 
-pub mod tencent_cos;
 pub mod aliyun_oss;
+pub mod tencent_cos;
 
 #[async_trait::async_trait]
 pub trait Storage {
@@ -24,4 +25,24 @@ pub struct CosItem {
     pub size: u64,
     #[tabled(rename = "大小")]
     pub human_size: String,
+}
+
+impl PartialEq for CosItem {
+    fn eq(&self, other: &Self) -> bool {
+        self.last_modified == other.last_modified
+    }
+}
+
+impl Eq for CosItem {}
+
+impl PartialOrd for CosItem {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for CosItem {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.last_modified.cmp(&other.last_modified)
+    }
 }
