@@ -44,7 +44,7 @@ sudo apt install p7zip-full
   ./backupdbtool --config config.yaml upload --all
   ```
 
-- **删除所有已上传备份文件**
+- **删除所有两天前的备份以减少云存储成本**
 
   ```bash
   ./backupdbtool --config config.yaml delete --all
@@ -69,7 +69,7 @@ sudo apt install p7zip-full
   30 2 * * * /path/to/backupdbtool --config /path/to/config.yaml upload --all
   ```
 
-- **每周日凌晨 3 点删除所有已上传备份**
+- **每周日凌晨 3 点删除所有两天前的备份以减少云存储成本**
   ```bash
   0 3 * * 0 /path/to/backupdbtool --config /path/to/config.yaml delete --all
   ```
