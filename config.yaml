@@ -1,26 +1,30 @@
 app:
-  backup_dir: "backup_dir"
-  db_type: "postgresql"
-  cos_provider: "tencent_cos"
-  cos_path: "db/"
-  compress_password: "password"
-tencent_cos:
-  secret_id: "AKIDuhLs"
-  secret_key: "dGnCj8"
-  region: "ap-shanghai"
-  bucket: "bucket-1234567"
-postgresql:
-  host: "localhost"
-  port: 5432
-  username: "postgres"
-  password: "postgres"
-mysql:
-  host: "localhost"
-  port: 3306
-  username: "root"
-  password: "password"
-aliyun_oss:
-  secret_id: "AKIDuhLs"
-  secret_key: "dGnCj8"
-  end_point: "oss-cn-shanghai.aliyuncs.com"
-  bucket: "bucket-1234567"
+  backup_dir: "backup_dir"                   # 本地备份文件存储目录
+  db_type: "postgresql"                      # 数据库类型: postgresql 或 mysql
+  cos_provider: "tencent_cos"                # 云存储服务提供商: tencent_cos 或 aliyun_oss
+  cos_path: "db/"                            # 云存储中的备份文件路径前缀
+  compress_password: "password"              # 备份压缩包加密密码
+        
+tencent_cos:        
+  secret_id: "AKIDuhLs"                      # 腾讯云 COS SecretId
+  secret_key: "dGnCj8"                       # 腾讯云 COS SecretKey
+  region: "ap-shanghai"                      # 腾讯云 COS 区域
+  bucket: "bucket-1234567"                   # 腾讯云 COS 存储桶名称
+        
+postgresql:        
+  host: "localhost"                          # PostgreSQL 数据库主机地址
+  port: 5432                                 # PostgreSQL 端口
+  username: "postgres"                       # PostgreSQL 用户名
+  password: "postgres"                       # PostgreSQL 密码
+        
+mysql:        
+  host: "localhost"                          # MySQL 数据库主机地址
+  port: 3306                                 # MySQL 端口
+  username: "root"                           # MySQL 用户名
+  password: "password"                       # MySQL 密码
+        
+aliyun_oss:        
+  secret_id: "AKIDuhLs"                      # 阿里云 OSS AccessKeyId
+  secret_key: "dGnCj8"                       # 阿里云 OSS AccessKeySecret
+  end_point: "oss-cn-shanghai.aliyuncs.com"  # 阿里云 OSS Endpoint
+  bucket: "bucket-1234567"                   # 阿里云 OSS 存储桶名称
