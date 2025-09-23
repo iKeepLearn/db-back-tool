@@ -90,7 +90,7 @@ pub async fn cleanup_old_backups(backup_dir: &PathBuf) -> Result<()> {
     Ok(())
 }
 
-pub fn list_backups(files: Vec<CosItem>) -> Result<()> {
+pub fn list_table(files: Vec<CosItem>) -> Result<()> {
     let table = Table::new(&files).to_string();
     println!("=== COS 文件列表 ===");
     println!("{}", table);
