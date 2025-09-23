@@ -54,6 +54,7 @@ sudo apt install p7zip-full
   ```bash
   ./backupdbtool --config config.yaml list
   ```
+  ![list](images/list.png)
 
 ## 定时任务（Cron）推荐配置
 

@@ -104,7 +104,6 @@ impl Storage for AliyunOss {
                         Ok(s) => {
                             let json = convert_xml_to_json(&s)
                                 .map_err(|e| format!("convert_xml_to_json error: {}", e))?;
-                            println!("Converted JSON: {}", json);
                             let contents = &json["ListBucketResult"]["Contents"];
 
                             if contents.is_array() {
