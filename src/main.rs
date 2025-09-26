@@ -3,7 +3,7 @@
 use anyhow::Result;
 use backupdbtool::cli::args::{Cli, Commands};
 use backupdbtool::cli::command::{backup_database, delete_from_cos, upload_to_cos};
-use backupdbtool::config::get_all_config;
+use backupdbtool::config::{get_all_config, CosProvider};
 use backupdbtool::storage::CosItem;
 use backupdbtool::utils;
 use clap::Parser;
@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
     };
     let app_config = &config.app;
     let db = app_config.database(&config);
-    let storage = app_config.storage(&config);
+    let storage = app_config.storage(&config).await;
 
     match cli.command {
         Commands::Backup { database_name } => {
@@ -49,8 +49,12 @@ async fn main() -> Result<()> {
             delete_from_cos(key, all, storage.as_ref()).await
         }
         Commands::List => {
+            let key_str = match &config.app.cos_provider {
+                CosProvider::LocalStorage => "*.7z",
+                _ => &app_config.cos_path.as_str(),
+            };
             let files: Vec<CosItem> = storage
-                .list(&app_config.cos_path.as_str())
+                .list(key_str)
                 .await
                 .map_err(|e| anyhow::anyhow!(e))?;
             let _ = utils::list_table(files);

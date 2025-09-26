@@ -1,6 +1,7 @@
 use crate::database::Database;
 use crate::database::{mysql::MySql, postgresql::PostgreSql};
 use crate::storage::aliyun_oss::AliyunOss;
+use crate::storage::local_storage::LocalStorage;
 use crate::storage::tencent_cos::TencentCos;
 use crate::storage::Storage;
 use crate::utils::resolve_path;
@@ -72,6 +73,8 @@ pub enum CosProvider {
     TencentCos,
     #[serde(rename = "aliyun_oss")]
     AliyunOss,
+    #[serde(rename = "local")]
+    LocalStorage,
 }
 
 impl Default for AppConfig {
@@ -110,7 +113,7 @@ impl AppConfig {
             }
         }
     }
-    pub fn storage(&self, config: &AllConfig) -> Box<dyn Storage> {
+    pub async fn storage(&self, config: &AllConfig) -> Box<dyn Storage> {
         match self.cos_provider {
             CosProvider::TencentCos => {
                 let config = &config.tencent_cos;
@@ -120,6 +123,11 @@ impl AppConfig {
             CosProvider::AliyunOss => {
                 let config = &config.aliyun_oss;
                 let storage = AliyunOss::new(config);
+                Box::new(storage)
+            }
+            CosProvider::LocalStorage => {
+                let path = &config.app.get_backup_dir();
+                let storage = LocalStorage::new(path.to_str().unwrap()).await;
                 Box::new(storage)
             }
         }
@@ -169,6 +177,18 @@ mod tests {
             port = 5432
             username = "user"
             password = "pass"
+
+            [mysql]
+            host = "localhost"
+            port = 3306
+            username = "user"
+            password = "pass"
+
+            [aliyun_oss]
+            secret_id = "testid"
+            secret_key = "testkey"
+            end_point = "ap-guangzhou"
+            bucket = "testbucket"
         "#;
 
         // 写入临时配置文件

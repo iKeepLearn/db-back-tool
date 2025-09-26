@@ -7,6 +7,7 @@ use tabled::Tabled;
 
 pub mod aliyun_oss;
 pub mod tencent_cos;
+pub mod local_storage;
 
 #[async_trait::async_trait]
 pub trait Storage {
