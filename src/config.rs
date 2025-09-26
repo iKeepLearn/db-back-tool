@@ -2,6 +2,7 @@ use crate::database::Database;
 use crate::database::{mysql::MySql, postgresql::PostgreSql};
 use crate::storage::aliyun_oss::AliyunOss;
 use crate::storage::local_storage::LocalStorage;
+use crate::storage::s3_compatible::S3Oss;
 use crate::storage::tencent_cos::TencentCos;
 use crate::storage::Storage;
 use crate::utils::resolve_path;
@@ -16,6 +17,7 @@ pub struct AllConfig {
     pub postgresql: PostgreSqlConfig,
     pub mysql: MySqlConfig,
     pub aliyun_oss: AliyunOssConfig,
+    pub s3: S3OssConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -41,6 +43,15 @@ pub struct AliyunOssConfig {
     pub secret_key: String,
     pub end_point: String,
     pub bucket: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct S3OssConfig {
+    pub secret_id: String,
+    pub secret_key: String,
+    pub end_point:Option<String>,
+    pub bucket: String,
+    pub region: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -75,6 +86,8 @@ pub enum CosProvider {
     AliyunOss,
     #[serde(rename = "local")]
     LocalStorage,
+    #[serde(rename = "s3")]
+    S3,
 }
 
 impl Default for AppConfig {
@@ -128,6 +141,11 @@ impl AppConfig {
             CosProvider::LocalStorage => {
                 let path = &config.app.get_backup_dir();
                 let storage = LocalStorage::new(path.to_str().unwrap()).await;
+                Box::new(storage)
+            }
+            CosProvider::S3 => {
+                let config = &config.s3;
+                let storage = S3Oss::new(config);
                 Box::new(storage)
             }
         }

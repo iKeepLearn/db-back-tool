@@ -28,3 +28,10 @@ aliyun_oss:
   secret_key: "dGnCj8"                       # 阿里云 OSS AccessKeySecret
   end_point: "oss-cn-shanghai.aliyuncs.com"  # 阿里云 OSS Endpoint
   bucket: "bucket-1234567"                   # 阿里云 OSS 存储桶名称
+
+s3:        
+  secret_id: "AKIDuhLs"                      # s3 协议兼容 OSS AccessKeyId
+  secret_key: "dGnCj8"                       # s3 协议兼容 OSS AccessKeySecret
+  end_point: "oss-cn-shanghai.aliyuncs.com"  # s3 协议兼容 OSS Endpoint,与 region 二选一，没有该项可保持现状
+  bucket: "bucket-1234567"                   # s3 协议兼容 OSS 存储桶名称
+  region: "ap-shanghai"                      # s3 协议兼容 OSS 区域,与 end_point 二选一，没有该项可保持现状
