@@ -45,11 +45,26 @@ sudo apt install p7zip-full
   ./backupdbtool --config config.yaml upload --all
   ```
 
+- **上传单个备份文件**
+
+  ```bash
+  ./backupdbtool --config config.yaml upload --file /path/to/filename.ext
+  ```
+
 - **删除所有两天前的备份以减少云存储成本**
 
   ```bash
   ./backupdbtool --config config.yaml delete --all
   ```
+
+- **删除单个云存储文件**
+
+  ```bash
+  ./backupdbtool --config config.yaml delete --key key
+  ```
+  > key 为云存储中的完整路径，比如想删除下方 list 中的 config.yaml 则 key 为 db/config.yaml。
+
+  > 完整示例: ./backupdbtool --config config.yaml delete --key db/config.yaml。
 
 - **列出所有备份文件**
   ```bash

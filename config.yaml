@@ -1,7 +1,7 @@
 app:
   backup_dir: "backup_dir"                   # 本地备份文件存储目录
   db_type: "postgresql"                      # 数据库类型: postgresql 或 mysql
-  cos_provider: "tencent_cos"                # 云存储服务提供商: tencent_cos 或 aliyun_oss
+  cos_provider: "tencent_cos"                # 云存储服务提供商: tencent_cos 或 aliyun_oss 或 s3
   cos_path: "db/"                            # 云存储中的备份文件路径前缀
   compress_password: "password"              # 备份压缩包加密密码
         
@@ -32,6 +32,6 @@ aliyun_oss:
 s3:        
   secret_id: "AKIDuhLs"                      # s3 协议兼容 OSS AccessKeyId
   secret_key: "dGnCj8"                       # s3 协议兼容 OSS AccessKeySecret
-  end_point: "oss-cn-shanghai.aliyuncs.com"  # s3 协议兼容 OSS Endpoint,与 region 二选一，没有该项可保持现状
+  end_point: "oss-cn-shanghai.aliyuncs.com"  # s3 协议兼容 OSS Endpoint,与 region 二选一，没有该项请填写 null
   bucket: "bucket-1234567"                   # s3 协议兼容 OSS 存储桶名称
-  region: "ap-shanghai"                      # s3 协议兼容 OSS 区域,与 end_point 二选一，没有该项可保持现状
+  region: "ap-shanghai"                      # s3 协议兼容 OSS 区域,与 end_point 二选一，没有该项请填写 null
