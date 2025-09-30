@@ -1,14 +1,16 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use humansize::{format_size, DECIMAL};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow::{self, Borrowed};
 use std::cmp::Ordering;
 use std::path::PathBuf;
 use tabled::Tabled;
 
 pub mod aliyun_oss;
-pub mod tencent_cos;
 pub mod local_storage;
 pub mod s3_compatible;
+pub mod tencent_cos;
 
 #[async_trait::async_trait]
 pub trait Storage {
@@ -17,16 +19,11 @@ pub trait Storage {
     async fn delete(&self, backup_name: &str) -> Result<(), String>;
 }
 
-#[derive(Debug, Serialize, Deserialize, Tabled, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CosItem {
-    #[tabled(rename = "文件路径")]
     pub key: String,
-    #[tabled(rename = "修改时间")]
     pub last_modified: DateTime<Utc>,
-    #[tabled(skip)]
     pub size: u64,
-    #[tabled(rename = "大小")]
-    pub human_size: String,
 }
 
 impl PartialEq for CosItem {
@@ -46,5 +43,21 @@ impl PartialOrd for CosItem {
 impl Ord for CosItem {
     fn cmp(&self, other: &Self) -> Ordering {
         self.last_modified.cmp(&other.last_modified)
+    }
+}
+
+impl Tabled for CosItem {
+    const LENGTH: usize = 3;
+    fn headers() -> Vec<Cow<'static, str>> {
+        vec![Borrowed("文件路径"), Borrowed("修改时间"), Borrowed("大小")]
+    }
+    fn fields(&self) -> Vec<Cow<'_, str>> {
+        let human_size = format_size(self.size, DECIMAL);
+        let last_modified = self.last_modified.format("%Y-%m-%d %H:%M").to_string();
+        vec![
+            self.key.clone().into(),
+            last_modified.into(),
+            human_size.into(),
+        ]
     }
 }

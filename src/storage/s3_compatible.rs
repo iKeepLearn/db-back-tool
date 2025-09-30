@@ -2,7 +2,6 @@ use super::CosItem;
 use crate::config::S3OssConfig;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
-use humansize::{format_size, DECIMAL};
 use s3::{creds::Credentials, Bucket, Region};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -24,7 +23,6 @@ impl From<S3OssItem> for CosItem {
             key: item.key,
             last_modified: item.last_modified,
             size: item.size,
-            human_size: format_size(item.size, DECIMAL),
         }
     }
 }

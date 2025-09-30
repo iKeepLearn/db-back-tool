@@ -2,7 +2,6 @@ use super::CosItem;
 use crate::config::TencentCosConfig;
 use crate::{storage::Storage, utils::convert_xml_to_json};
 use chrono::{DateTime, Utc};
-use humansize::{format_size, DECIMAL};
 use qcos::client::Client;
 use qcos::request::ErrNo;
 use serde::{Deserialize, Serialize};
@@ -25,7 +24,6 @@ impl From<TencentCosItem> for CosItem {
             key: item.key,
             last_modified: item.last_modified,
             size: item.size,
-            human_size: format_size(item.size, DECIMAL),
         }
     }
 }

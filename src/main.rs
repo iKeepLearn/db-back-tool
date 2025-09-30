@@ -1,11 +1,13 @@
 // src/main.rs
 
+use std::process;
+
 use anyhow::Result;
 use backupdbtool::cli::args::{Cli, Commands};
 use backupdbtool::cli::command::{backup_database, delete_from_cos, upload_to_cos};
 use backupdbtool::config::{get_all_config, CosProvider};
 use backupdbtool::storage::CosItem;
-use backupdbtool::utils;
+use backupdbtool::utils::{self, resolve_path};
 use clap::Parser;
 use tracing::{error, info};
 use tracing_subscriber;
@@ -17,14 +19,29 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
     // 加载配置
-    let config = match get_all_config(&cli.config) {
+    let mut config = match get_all_config(&cli.config) {
         Ok(config) => config,
         Err(e) => {
             error!("Failed to load config: {}", e);
             anyhow::bail!(e);
         }
     };
+    let result = resolve_path(&config.app.backup_dir.to_string_lossy());
+    match result {
+        Ok(path) => {
+            config.app.backup_dir = path;
+        }
+        Err(_) => {
+            error!(
+                "please check the backup_dir path: {}",
+                &config.app.backup_dir.to_string_lossy()
+            );
+            process::exit(1);
+        }
+    }
+
     let app_config = &config.app;
+    let _ = app_config.confirm_backup_dir();
     let db = app_config.database(&config);
     let storage = app_config.storage(&config).await;
 

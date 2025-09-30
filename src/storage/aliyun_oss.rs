@@ -3,7 +3,6 @@ use crate::storage::Storage;
 use crate::{config::AliyunOssConfig, utils::convert_xml_to_json};
 use aliyun_oss_rs::{Error as OssError, OssBucket, OssClient};
 use chrono::{DateTime, Utc};
-use humansize::{format_size, DECIMAL};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::vec;
@@ -25,7 +24,6 @@ impl From<AliyunOssItem> for CosItem {
             key: item.key,
             last_modified: item.last_modified,
             size: item.size,
-            human_size: format_size(item.size, DECIMAL),
         }
     }
 }

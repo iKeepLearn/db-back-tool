@@ -5,10 +5,10 @@ use crate::storage::local_storage::LocalStorage;
 use crate::storage::s3_compatible::S3Oss;
 use crate::storage::tencent_cos::TencentCos;
 use crate::storage::Storage;
-use crate::utils::resolve_path;
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
 use std::path::PathBuf;
+use tokio::fs::create_dir_all;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AllConfig {
@@ -22,7 +22,7 @@ pub struct AllConfig {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct AppConfig {
-    pub backup_dir: String,
+    pub backup_dir: PathBuf,
     pub db_type: DbType,
     pub cos_provider: CosProvider,
     pub cos_path: String,
@@ -49,7 +49,7 @@ pub struct AliyunOssConfig {
 pub struct S3OssConfig {
     pub secret_id: String,
     pub secret_key: String,
-    pub end_point:Option<String>,
+    pub end_point: Option<String>,
     pub bucket: String,
     pub region: Option<String>,
 }
@@ -97,7 +97,7 @@ impl Default for AppConfig {
             .join(".dbbackup");
 
         AppConfig {
-            backup_dir: backup_dir.display().to_string(),
+            backup_dir,
             db_type: DbType::Postgresql,
             cos_provider: CosProvider::TencentCos,
             cos_path: "db/".into(),
@@ -107,13 +107,18 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
-    pub fn get_backup_dir(&self) -> PathBuf {
-        let path = resolve_path(&self.backup_dir);
-        match path {
-            Ok(p) => p,
-            Err(_) => AppConfig::default().backup_dir.into(),
+    pub async fn confirm_backup_dir(&self) {
+        let home_dir: PathBuf = AppConfig::default().backup_dir;
+        let result = create_dir_all(&self.backup_dir).await;
+        if result.is_err() {
+            create_dir_all(home_dir).await.unwrap();
         }
     }
+
+    pub fn get_backup_dir(&self) -> PathBuf {
+        self.backup_dir.clone().into()
+    }
+
     pub fn database(&self, config: &AllConfig) -> Box<dyn Database> {
         match self.db_type {
             DbType::Postgresql => {
@@ -217,7 +222,7 @@ mod tests {
         let config = get_all_config(file_path.to_str().unwrap()).unwrap();
 
         // 断言配置内容
-        assert_eq!(config.app.backup_dir, "/tmp/dbbackup");
+        assert_eq!(config.app.backup_dir, PathBuf::from("/tmp/dbbackup"));
         assert_eq!(config.app.db_type, DbType::Postgresql);
         assert_eq!(config.app.cos_provider, CosProvider::TencentCos);
         assert_eq!(config.app.cos_path, "db/");

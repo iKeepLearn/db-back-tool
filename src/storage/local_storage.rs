@@ -3,7 +3,6 @@ use crate::{config::AppConfig, storage::Storage, utils::resolve_path};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use glob::glob;
-use humansize::{format_size, DECIMAL};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
@@ -22,7 +21,6 @@ impl From<LocalStorageItem> for CosItem {
             key: item.key,
             last_modified: item.last_modified,
             size: item.size,
-            human_size: format_size(item.size, DECIMAL),
         }
     }
 }
