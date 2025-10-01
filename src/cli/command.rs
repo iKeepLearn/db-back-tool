@@ -3,13 +3,13 @@ use crate::database::Database;
 use crate::storage::Storage;
 use crate::{compression, utils};
 use anyhow::Result;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
 pub async fn backup_database(
     db: &dyn Database,
     database_name: &str,
-    back_dir: &PathBuf,
+    back_dir: &Path,
     password: &str,
 ) -> Result<()> {
     // 1. 备份数据库

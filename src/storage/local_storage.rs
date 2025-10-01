@@ -57,26 +57,24 @@ impl Storage for LocalStorage {
 
         let files = glob(&pattern).map_err(|e| e.to_string())?;
 
-        for entry in files {
-            if let Ok(path) = entry {
-                let metadata = fs::metadata(&path).await.map_err(|e| e.to_string())?;
-                if metadata.is_file() {
-                    let last_modified: DateTime<Utc> = metadata
-                        .modified()
-                        .map_err(|e| format!("Failed to get modification time: {}", e))?
-                        .into();
+        for path in files.flatten() {
+            let metadata = fs::metadata(&path).await.map_err(|e| e.to_string())?;
+            if metadata.is_file() {
+                let last_modified: DateTime<Utc> = metadata
+                    .modified()
+                    .map_err(|e| format!("Failed to get modification time: {}", e))?
+                    .into();
 
-                    let file_name = path
-                        .file_name()
-                        .ok_or_else(|| format!("Invalid file path: {}", path.display()))?
-                        .to_string_lossy();
+                let file_name = path
+                    .file_name()
+                    .ok_or_else(|| format!("Invalid file path: {}", path.display()))?
+                    .to_string_lossy();
 
-                    items.push(LocalStorageItem {
-                        key: file_name.to_string(),
-                        last_modified,
-                        size: metadata.len(),
-                    });
-                }
+                items.push(LocalStorageItem {
+                    key: file_name.to_string(),
+                    last_modified,
+                    size: metadata.len(),
+                });
             }
         }
 
