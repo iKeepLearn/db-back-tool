@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use qcos::client::Client;
 use qcos::request::ErrNo;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tracing::info;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -34,13 +34,13 @@ pub struct TencentCos {
 
 #[async_trait::async_trait]
 impl Storage for TencentCos {
-    async fn upload(&self, file_path: &PathBuf, cos_path: &str) -> Result<(), String> {
+    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<(), String> {
         let file_name = file_path.file_name().unwrap().to_string_lossy();
         let cos_path_full = format!("{}{}", cos_path, file_name);
 
         let res = self
             .client
-            .put_object(file_path, &cos_path_full, None, None)
+            .put_object(&PathBuf::from(file_path), &cos_path_full, None, None)
             .await;
         if res.error_no == ErrNo::SUCCESS {
             info!("Successfully uploaded: {}", file_name);
@@ -51,7 +51,7 @@ impl Storage for TencentCos {
     }
 
     async fn list(&self, key: &str) -> Result<Vec<CosItem>, String> {
-        let res = self.client.list_objects(key.into(), "", "", "", 0).await;
+        let res = self.client.list_objects(key, "", "", "", 0).await;
         if res.error_no == ErrNo::SUCCESS {
             match String::from_utf8(res.result) {
                 Ok(s) => {

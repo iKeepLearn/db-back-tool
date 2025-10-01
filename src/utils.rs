@@ -3,7 +3,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use glob::glob;
 use quickxml_to_serde::{xml_string_to_json, Config as QuickXmlConfig};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tabled::Table;
 use tracing::{error, info};
 
@@ -39,7 +39,7 @@ pub fn is_yesterday_before(date: DateTime<Utc>) -> bool {
 }
 
 pub async fn upload_all_backups(
-    backup_dir: &PathBuf,
+    backup_dir: &Path,
     storage: &dyn Storage,
     cos_path: &str,
 ) -> Result<(), String> {
@@ -62,7 +62,7 @@ pub async fn upload_all_backups(
     Ok(())
 }
 
-pub async fn cleanup_old_backups(backup_dir: &PathBuf) -> Result<()> {
+pub async fn cleanup_old_backups(backup_dir: &Path) -> Result<()> {
     let pattern = backup_dir.join("*.7z").to_string_lossy().to_string();
 
     let files = glob(&pattern)?;

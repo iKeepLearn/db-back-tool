@@ -3,7 +3,7 @@ use crate::config::PostgreSqlConfig;
 use chrono::Utc;
 use serde::Deserialize;
 use std::ops::Deref;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
@@ -20,11 +20,7 @@ impl Deref for PostgreSql {
 
 #[async_trait::async_trait]
 impl Database for PostgreSql {
-    async fn backup(
-        &self,
-        database_name: &str,
-        backup_dir: &PathBuf,
-    ) -> anyhow::Result<std::path::PathBuf> {
+    async fn backup(&self, database_name: &str, backup_dir: &Path) -> anyhow::Result<PathBuf> {
         let backup_filename = format!(
             "{}_{}.sql",
             database_name,

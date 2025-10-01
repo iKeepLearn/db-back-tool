@@ -67,10 +67,7 @@ pub async fn delete_from_cos(key: Option<String>, all: bool, storage: &dyn Stora
         storage.delete(&key_str).await.map_err(anyhow::Error::msg)?;
         info!("File deleted successfully: {}", key_str);
     } else if all {
-        let files = storage
-            .list("db".into())
-            .await
-            .map_err(anyhow::Error::msg)?;
+        let files = storage.list("db").await.map_err(anyhow::Error::msg)?;
 
         let yesterday_files: Vec<_> = files
             .clone()

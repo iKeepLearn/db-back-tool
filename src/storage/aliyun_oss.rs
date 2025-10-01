@@ -4,7 +4,7 @@ use crate::{config::AliyunOssConfig, utils::convert_xml_to_json};
 use aliyun_oss_rs::{Error as OssError, OssBucket, OssClient};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::Path;
 use std::vec;
 use tracing::info;
 
@@ -34,7 +34,7 @@ pub struct AliyunOss {
 
 #[async_trait::async_trait]
 impl Storage for AliyunOss {
-    async fn upload(&self, file_path: &PathBuf, cos_path: &str) -> Result<(), String> {
+    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<(), String> {
         let file_name = file_path.file_name().unwrap().to_string_lossy();
         let oss_path_full = format!("{}{}", cos_path, file_name);
         let object = self.client.object(&oss_path_full);
@@ -139,7 +139,7 @@ impl Storage for AliyunOss {
     }
 
     async fn delete(&self, key: &str) -> Result<(), String> {
-        let object = self.client.object(&key);
+        let object = self.client.object(key);
 
         let res = object.del_object().send().await;
 

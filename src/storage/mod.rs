@@ -4,7 +4,7 @@ use humansize::{format_size, DECIMAL};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow::{self, Borrowed};
 use std::cmp::Ordering;
-use std::path::PathBuf;
+use std::path::Path;
 use tabled::Tabled;
 
 pub mod aliyun_oss;
@@ -14,7 +14,7 @@ pub mod tencent_cos;
 
 #[async_trait::async_trait]
 pub trait Storage {
-    async fn upload(&self, file_path: &PathBuf, cos_path: &str) -> Result<(), String>;
+    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<(), String>;
     async fn list(&self, key: &str) -> Result<Vec<CosItem>, String>;
     async fn delete(&self, backup_name: &str) -> Result<(), String>;
 }

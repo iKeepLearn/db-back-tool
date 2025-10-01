@@ -10,7 +10,6 @@ use backupdbtool::storage::CosItem;
 use backupdbtool::utils::{self, resolve_path};
 use clap::Parser;
 use tracing::{error, info};
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -41,7 +40,7 @@ async fn main() -> Result<()> {
     }
 
     let app_config = &config.app;
-    let _ = app_config.confirm_backup_dir();
+    let _ = app_config.confirm_backup_dir().await;
     let db = app_config.database(&config);
     let storage = app_config.storage(&config).await;
 
@@ -58,7 +57,7 @@ async fn main() -> Result<()> {
         }
         Commands::Upload { file, all } => {
             info!("Starting upload to COS");
-            upload_to_cos(file, all, &app_config, storage.as_ref()).await
+            upload_to_cos(file, all, app_config, storage.as_ref()).await
         }
         Commands::Delete { key, all } => {
             info!("Starting delete yesterday before file from  COS");
@@ -68,7 +67,7 @@ async fn main() -> Result<()> {
         Commands::List => {
             let key_str = match &config.app.cos_provider {
                 CosProvider::LocalStorage => "*.7z",
-                _ => &app_config.cos_path.as_str(),
+                _ => app_config.cos_path.as_str(),
             };
             let files: Vec<CosItem> = storage
                 .list(key_str)

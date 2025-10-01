@@ -4,7 +4,7 @@ use anyhow::Result;
 use chrono::{DateTime, Utc};
 use glob::glob;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::info;
 
@@ -31,7 +31,7 @@ pub struct LocalStorage {
 
 #[async_trait::async_trait]
 impl Storage for LocalStorage {
-    async fn upload(&self, _file_path: &PathBuf, _cos_path: &str) -> Result<(), String> {
+    async fn upload(&self, _file_path: &Path, _cos_path: &str) -> Result<(), String> {
         // // 获取文件名
         // let file_name = file_path
         //     .file_name()
@@ -52,34 +52,31 @@ impl Storage for LocalStorage {
     }
 
     async fn list(&self, key: &str) -> Result<Vec<CosItem>, String> {
-        let pattern = self.base_path.join(&key).to_string_lossy().to_string();
+        let pattern = self.base_path.join(key).to_string_lossy().to_string();
         let mut items = Vec::new();
 
         let files = glob(&pattern).map_err(|e| e.to_string())?;
 
         for entry in files {
-            match entry {
-                Ok(path) => {
-                    let metadata = fs::metadata(&path).await.map_err(|e| e.to_string())?;
-                    if metadata.is_file() {
-                        let last_modified: DateTime<Utc> = metadata
-                            .modified()
-                            .map_err(|e| format!("Failed to get modification time: {}", e))?
-                            .into();
+            if let Ok(path) = entry {
+                let metadata = fs::metadata(&path).await.map_err(|e| e.to_string())?;
+                if metadata.is_file() {
+                    let last_modified: DateTime<Utc> = metadata
+                        .modified()
+                        .map_err(|e| format!("Failed to get modification time: {}", e))?
+                        .into();
 
-                        let file_name = path
-                            .file_name()
-                            .ok_or_else(|| format!("Invalid file path: {}", path.display()))?
-                            .to_string_lossy();
+                    let file_name = path
+                        .file_name()
+                        .ok_or_else(|| format!("Invalid file path: {}", path.display()))?
+                        .to_string_lossy();
 
-                        items.push(LocalStorageItem {
-                            key: file_name.to_string(),
-                            last_modified,
-                            size: metadata.len(),
-                        });
-                    }
+                    items.push(LocalStorageItem {
+                        key: file_name.to_string(),
+                        last_modified,
+                        size: metadata.len(),
+                    });
                 }
-                Err(_) => {}
             }
         }
 
@@ -107,10 +104,10 @@ impl Storage for LocalStorage {
 
 impl LocalStorage {
     pub async fn new(base_path: &str) -> Self {
-        let path = resolve_path(&base_path);
+        let path = resolve_path(base_path);
         let backup_path = match path {
             Ok(p) => p,
-            Err(_) => AppConfig::default().backup_dir.into(),
+            Err(_) => AppConfig::default().backup_dir,
         };
         let _ = fs::create_dir_all(&backup_path).await.map_err(|_| {});
         LocalStorage {

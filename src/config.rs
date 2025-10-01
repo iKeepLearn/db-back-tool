@@ -116,7 +116,7 @@ impl AppConfig {
     }
 
     pub fn get_backup_dir(&self) -> PathBuf {
-        self.backup_dir.clone().into()
+        self.backup_dir.clone()
     }
 
     pub fn database(&self, config: &AllConfig) -> Box<dyn Database> {

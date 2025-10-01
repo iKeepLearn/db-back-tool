@@ -4,7 +4,7 @@ use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use s3::{creds::Credentials, Bucket, Region};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::Path;
 use tracing::info;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -34,7 +34,7 @@ pub struct S3Oss {
 
 #[async_trait::async_trait]
 impl Storage for S3Oss {
-    async fn upload(&self, file_path: &PathBuf, cos_path: &str) -> Result<(), String> {
+    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<(), String> {
         let file_name = file_path
             .file_name()
             .ok_or_else(|| format!("Invalid file path: {}", file_path.display()))?
