@@ -1,11 +1,10 @@
 use super::CosItem;
+use crate::config::AliyunOssConfig;
 use crate::storage::Storage;
-use crate::{config::AliyunOssConfig, utils::convert_xml_to_json};
-use aliyun_oss_rs::{Error as OssError, OssBucket, OssClient};
 use chrono::{DateTime, Utc};
+use s3::{creds::Credentials, Bucket, Region};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use std::vec;
 use tracing::info;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -29,133 +28,124 @@ impl From<AliyunOssItem> for CosItem {
 }
 
 pub struct AliyunOss {
-    pub client: OssBucket,
+    pub client: Box<Bucket>,
 }
 
 #[async_trait::async_trait]
 impl Storage for AliyunOss {
     async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<(), String> {
-        let file_name = file_path.file_name().unwrap().to_string_lossy();
-        let oss_path_full = format!("{}{}", cos_path, file_name);
-        let object = self.client.object(&oss_path_full);
+        let file_name = file_path
+            .file_name()
+            .ok_or_else(|| format!("Invalid file path: {}", file_path.display()))?
+            .to_string_lossy();
 
-        let res = object.put_object().send_file(&file_name).await;
+        let s3_key = if cos_path.ends_with('/') {
+            format!("{}{}", cos_path, file_name)
+        } else {
+            format!("{}/{}", cos_path, file_name)
+        };
 
-        if res.is_ok() {
-            info!("Successfully uploaded: {}", file_name);
+        // 读取文件内容
+        let content = std::fs::read(file_path)
+            .map_err(|e| format!("Failed to read file {}: {}", file_path.display(), e))?;
+
+        // 上传到 Aliyun Oss
+        let res = self
+            .client
+            .put_object(&s3_key, &content)
+            .await
+            .map_err(|e| format!("S3 upload failed: {}", e))?;
+
+        if res.status_code() == 200 {
+            info!("Successfully uploaded: {}", file_name,);
             Ok(())
         } else {
             Err(format!(
-                "COS upload failed: {}",
-                file_path.to_string_lossy()
+                "Aliyun oss upload failed with HTTP code: {}",
+                res.status_code()
             ))
         }
     }
 
     async fn list(&self, key: &str) -> Result<Vec<CosItem>, String> {
-        let res = self
+        let result = self
             .client
-            .list_objects()
-            .set_prefix(key)
-            .set_max_keys(200)
-            .send()
-            .await;
-        match res {
-            Ok(response) => {
-                println!("aliyun oss response: {:?}", response);
-                let contents = response.contents;
-                match contents {
-                    Some(value) => {
-                        println!("Total items: {:?}", value);
-                        let items: Vec<CosItem> = value
-                            .iter()
-                            .filter_map(|item| {
-                                // Try to parse the last_modified string into DateTime<Utc>
-                                match DateTime::parse_from_rfc3339(&item.last_modified)
-                                    .map(|dt| dt.with_timezone(&Utc))
-                                {
-                                    Ok(last_modified) => Some(AliyunOssItem {
-                                        key: item.key.clone(),
-                                        last_modified,
-                                        size: item.size,
-                                    }),
-                                    Err(e) => {
-                                        info!(
-                                            "Failed to parse last_modified: {} ({})",
-                                            item.last_modified, e
-                                        );
-                                        None
-                                    }
-                                }
-                            })
-                            .map(CosItem::from)
-                            .collect();
-                        Ok(items)
-                    }
-                    None => Ok(vec![]),
-                }
-            }
-            Err(e) => match e {
-                OssError::OssInvalidResponse(Some(value)) => {
-                    let string = String::from_utf8(value.to_vec());
-                    match string {
-                        Ok(s) => {
-                            let json = convert_xml_to_json(&s)
-                                .map_err(|e| format!("convert_xml_to_json error: {}", e))?;
-                            let contents = &json["ListBucketResult"]["Contents"];
+            .list(key.to_string(), None)
+            .await
+            .map_err(|e| format!("S3 list failed: {}", e))?;
 
-                            if contents.is_array() {
-                                let contents = &contents.as_array().ok_or_else(|| {
-                                    "Expected 'Contents' to be an array".to_string()
-                                })?;
-                                let mut result: Vec<AliyunOssItem> = contents
-                                    .iter()
-                                    .map(|item| {
-                                        serde_json::from_value(item.clone())
-                                            .map_err(|e| format!("serde_json error: {}", e))
-                                    })
-                                    .collect::<Result<_, _>>()?;
-                                result.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
-                                return Ok(result.into_iter().map(|item| item.into()).collect());
-                            }
-
-                            if contents.is_object() {
-                                return Ok(vec![serde_json::from_value(contents.clone())
-                                    .map_err(|e| format!("serde_json error: {}", e))
-                                    .map(|item: AliyunOssItem| item.into())?]);
-                            }
-
-                            Err(format!("failed to parse result {}", s))
+        let mut all_items = Vec::new();
+        for item in result {
+            let contents = item.contents;
+            let items: Vec<CosItem> = contents
+                .into_iter()
+                .filter_map(|object| {
+                    // Try to parse the last_modified string into DateTime<Utc>
+                    match DateTime::parse_from_rfc3339(&object.last_modified)
+                        .map(|dt| dt.with_timezone(&Utc))
+                    {
+                        Ok(last_modified) => Some(CosItem {
+                            key: object.key.clone(),
+                            last_modified,
+                            size: object.size,
+                        }),
+                        Err(e) => {
+                            info!(
+                                "Failed to parse last_modified: {} ({})",
+                                object.last_modified, e
+                            );
+                            None
                         }
-                        Err(e) => Err(format!("SUCCESS (but failed to decode UTF-8): {}", e)),
                     }
-                }
-                _ => {
-                    println!("aliyun oss error response: {:?}", e);
-                    Err(format!("COS list failed: {}", e))
-                }
-            },
+                })
+                .collect();
+
+            all_items.extend(items);
         }
+
+        Ok(all_items)
     }
 
     async fn delete(&self, key: &str) -> Result<(), String> {
-        let object = self.client.object(key);
+        let res = self
+            .client
+            .delete_object(key)
+            .await
+            .map_err(|e| format!("Aliyun oss delete failed: {}", e))?;
 
-        let res = object.del_object().send().await;
-
-        if res.is_ok() {
-            info!("Successfully Deleted: {}", &key);
+        if res.status_code() == 200 || res.status_code() == 204 {
+            info!("Successfully deleted: {}", key);
             Ok(())
         } else {
-            Err(format!("delete from aliyun oss failed: {}", key))
+            Err(format!(
+                "Aliyun oss delete failed with HTTP code: {}",
+                res.status_code()
+            ))
         }
     }
 }
 
 impl AliyunOss {
     pub fn new(config: &AliyunOssConfig) -> Self {
-        let client = OssClient::new(&config.secret_id, &config.secret_key);
-        let bucket = client.bucket(&config.bucket, &config.end_point);
+        // 创建区域配置
+        let region = Region::Custom {
+            region: "".to_string(),
+            endpoint: config.end_point.to_string(),
+        };
+
+        // 创建凭据
+        let credentials = Credentials {
+            access_key: Some(config.secret_id.to_string()),
+            secret_key: Some(config.secret_key.to_string()),
+            security_token: None,
+            session_token: None,
+            expiration: None,
+        };
+
+        // 创建存储桶实例
+        let bucket = Bucket::new(&config.bucket, region, credentials)
+            .expect("create aliyun oss bucket failed");
+
         AliyunOss { client: bucket }
     }
 }

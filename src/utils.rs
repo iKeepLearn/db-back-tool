@@ -2,7 +2,6 @@ use crate::storage::{CosItem, Storage};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use glob::glob;
-use quickxml_to_serde::{xml_string_to_json, Config as QuickXmlConfig};
 use std::path::{Path, PathBuf};
 use tabled::Table;
 use tracing::{error, info};
@@ -21,12 +20,6 @@ pub fn resolve_path(path_str: &str) -> Result<PathBuf, String> {
     } else {
         Ok(resolved_path)
     }
-}
-
-pub fn convert_xml_to_json(xml: &str) -> Result<serde_json::Value> {
-    let config = QuickXmlConfig::new_with_defaults();
-    let json = xml_string_to_json(xml.to_string(), &config)?;
-    Ok(json)
 }
 
 pub fn is_yesterday_before(date: DateTime<Utc>) -> bool {

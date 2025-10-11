@@ -88,7 +88,7 @@ impl Storage for S3Oss {
                     match DateTime::parse_from_rfc3339(&object.last_modified)
                         .map(|dt| dt.with_timezone(&Utc))
                     {
-                        Ok(last_modified) => Some(S3OssItem {
+                        Ok(last_modified) => Some(CosItem {
                             key: object.key.clone(),
                             last_modified,
                             size: object.size,
@@ -102,7 +102,6 @@ impl Storage for S3Oss {
                         }
                     }
                 })
-                .map(CosItem::from)
                 .collect();
 
             all_items.extend(items);
