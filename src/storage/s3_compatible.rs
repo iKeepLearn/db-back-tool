@@ -48,7 +48,8 @@ impl Storage for S3Oss {
         };
 
         // 读取文件内容
-        let content = std::fs::read(file_path)
+        let content = tokio::fs::read(file_path)
+            .await
             .map_err(|e| format!("Failed to read file {}: {}", file_path.display(), e))?;
 
         // 上传到 S3
