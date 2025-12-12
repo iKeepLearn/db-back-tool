@@ -28,6 +28,7 @@ impl From<TencentCosItem> for CosItem {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct TencentCos {
     pub client: CosClient,
 }

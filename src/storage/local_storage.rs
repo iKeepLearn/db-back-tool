@@ -25,6 +25,7 @@ impl From<LocalStorageItem> for CosItem {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct LocalStorage {
     pub base_path: PathBuf,
 }

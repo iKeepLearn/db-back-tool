@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use humansize::{format_size, DECIMAL};
+use humansize::{DECIMAL, format_size};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow::{self, Borrowed};
 use std::cmp::Ordering;
@@ -13,7 +13,7 @@ pub mod s3_compatible;
 pub mod tencent_cos;
 
 #[async_trait::async_trait]
-pub trait Storage {
+pub trait Storage: Send + Sync {
     async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<(), String>;
     async fn list(&self, key: &str) -> Result<Vec<CosItem>, String>;
     async fn delete(&self, backup_name: &str) -> Result<(), String>;

@@ -1,7 +1,7 @@
 [package]
 name = "backupdbtool"
-version = "1.4.1"
-edition = "2021"
+version = "1.5.1"
+edition = "2024"
 
 [lib]
 path = "src/lib.rs"
@@ -30,6 +30,7 @@ shellexpand = "3.1"
 humansize = "2.1"
 rust-s3 = "0.37"
 cos-rust-sdk = "0.1"
+futures = "0.3.31"
 # sevenz-rust2 = "0.18"
 
 [dev-dependencies]

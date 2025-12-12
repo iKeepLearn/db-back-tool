@@ -4,6 +4,7 @@ use crate::storage::Storage;
 use crate::{compression, utils};
 use anyhow::Result;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use tracing::{error, info};
 
 pub async fn backup_database(
@@ -36,7 +37,7 @@ pub async fn upload_to_cos(
     file: Option<String>,
     all: bool,
     config: &AppConfig,
-    storage: &dyn Storage,
+    storage: Arc<dyn Storage>,
 ) -> Result<()> {
     if let Some(file_path) = file {
         // 上传单个文件

@@ -1,9 +1,14 @@
 use crate::storage::{CosItem, Storage};
 use anyhow::Result;
 use chrono::{DateTime, Utc};
+use futures::future::join_all;
 use glob::glob;
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 use tabled::Table;
+use tokio::task::JoinHandle;
 use tracing::{error, info};
 
 pub fn resolve_path(path_str: &str) -> Result<PathBuf, String> {
@@ -33,25 +38,27 @@ pub fn is_yesterday_before(date: DateTime<Utc>) -> bool {
 
 pub async fn upload_all_backups(
     backup_dir: &Path,
-    storage: &dyn Storage,
+    storage: Arc<dyn Storage>,
     cos_path: &str,
 ) -> Result<(), String> {
     let pattern = backup_dir.join("*.7z").to_string_lossy().to_string();
 
     let files = glob(&pattern).map_err(|e| e.to_string())?;
 
-    for entry in files {
-        match entry {
-            Ok(path) => {
-                info!("Uploading file: {:?}", path);
-                storage.upload(&path, cos_path).await?;
-            }
-            Err(e) => {
-                error!("Error reading file: {}", e);
-                return Err(format!("Error reading file: {}", e));
-            }
-        }
+    let files: Vec<PathBuf> = files.into_iter().filter_map(|file| file.ok()).collect();
+
+    let mut tasks: Vec<JoinHandle<Result<(), String>>> = Vec::with_capacity(files.len());
+
+    let cos_path = cos_path.to_owned();
+    for file in files {
+        let storage = storage.clone();
+        let cos_path = cos_path.clone();
+        let handle: JoinHandle<Result<(), String>> =
+            tokio::spawn(async move { storage.upload(&file, &cos_path).await });
+        tasks.push(handle);
     }
+
+    let _ = join_all(tasks).await;
     Ok(())
 }
 

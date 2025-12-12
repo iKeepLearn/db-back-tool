@@ -169,7 +169,7 @@ dependencies = [
 
 [[package]]
 name = "backupdbtool"
-version = "1.4.1"
+version = "1.5.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -178,6 +178,7 @@ dependencies = [
  "config",
  "cos-rust-sdk",
  "dirs",
+ "futures",
  "glob",
  "humansize",
  "once_cell",

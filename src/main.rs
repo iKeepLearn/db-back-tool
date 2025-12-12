@@ -5,7 +5,7 @@ use std::process;
 use anyhow::Result;
 use backupdbtool::cli::args::{Cli, Commands};
 use backupdbtool::cli::command::{backup_database, delete_from_cos, upload_to_cos};
-use backupdbtool::config::{get_all_config, CosProvider};
+use backupdbtool::config::{CosProvider, get_all_config};
 use backupdbtool::storage::CosItem;
 use backupdbtool::utils::{self, resolve_path};
 use clap::Parser;
@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
         }
         Commands::Upload { file, all } => {
             info!("Starting upload to COS");
-            upload_to_cos(file, all, app_config, storage.as_ref()).await
+            upload_to_cos(file, all, app_config, storage).await
         }
         Commands::Delete { key, all } => {
             info!("Starting delete yesterday before file from  COS");

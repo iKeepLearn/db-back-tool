@@ -2,7 +2,7 @@ use super::CosItem;
 use crate::config::AliyunOssConfig;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
-use s3::{creds::Credentials, Bucket, Region};
+use s3::{Bucket, Region, creds::Credentials};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::info;
@@ -27,6 +27,7 @@ impl From<AliyunOssItem> for CosItem {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct AliyunOss {
     pub client: Box<Bucket>,
 }

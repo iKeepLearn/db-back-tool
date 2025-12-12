@@ -2,7 +2,7 @@ use super::CosItem;
 use crate::config::S3OssConfig;
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
-use s3::{creds::Credentials, Bucket, Region};
+use s3::{Bucket, Region, creds::Credentials};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tracing::info;
@@ -27,6 +27,7 @@ impl From<S3OssItem> for CosItem {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct S3Oss {
     pub bucket: Box<Bucket>,
     pub bucket_name: String,

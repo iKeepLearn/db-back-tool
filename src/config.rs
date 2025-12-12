@@ -1,13 +1,14 @@
 use crate::database::Database;
 use crate::database::{mysql::MySql, postgresql::PostgreSql};
+use crate::storage::Storage;
 use crate::storage::aliyun_oss::AliyunOss;
 use crate::storage::local_storage::LocalStorage;
 use crate::storage::s3_compatible::S3Oss;
 use crate::storage::tencent_cos::TencentCos;
-use crate::storage::Storage;
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::fs::create_dir_all;
 
 #[derive(Debug, Deserialize, Clone)]
@@ -131,27 +132,27 @@ impl AppConfig {
             }
         }
     }
-    pub async fn storage(&self, config: &AllConfig) -> Box<dyn Storage> {
+    pub async fn storage(&self, config: &AllConfig) -> Arc<dyn Storage> {
         match self.cos_provider {
             CosProvider::TencentCos => {
                 let config = &config.tencent_cos;
                 let storage = TencentCos::new(config);
-                Box::new(storage)
+                Arc::new(storage)
             }
             CosProvider::AliyunOss => {
                 let config = &config.aliyun_oss;
                 let storage = AliyunOss::new(config);
-                Box::new(storage)
+                Arc::new(storage)
             }
             CosProvider::LocalStorage => {
                 let path = &config.app.get_backup_dir();
                 let storage = LocalStorage::new(path.to_str().unwrap()).await;
-                Box::new(storage)
+                Arc::new(storage)
             }
             CosProvider::S3 => {
                 let config = &config.s3;
                 let storage = S3Oss::new(config);
-                Box::new(storage)
+                Arc::new(storage)
             }
         }
     }
