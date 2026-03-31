@@ -35,3 +35,7 @@ s3:
   end_point: "oss-cn-shanghai.aliyuncs.com"  # s3 协议兼容 OSS Endpoint,与 region 二选一，没有该项请填写 null
   bucket: "bucket-1234567"                   # s3 协议兼容 OSS 存储桶名称
   region: "ap-shanghai"                      # s3 协议兼容 OSS 区域,与 end_point 二选一，没有该项请填写 null
+
+webhook:                                     # Webhook 配置 如果没有需要可以删除该项
+  url: "https://api.com/webhook"             # Webhook URL, 例如: https://api.com/webhook
+  token: "ISRv"                              # Webhook 验证令牌, 例如: ISRv
