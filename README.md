@@ -12,6 +12,8 @@
 - 一键上传备份到腾讯云 COS\阿里云 OSS\兼容S3协议的其他云存储
 - 支持备份文件的批量上传、批量删除、列表查看
 - 支持自定义配置文件
+- 支持加密配置文件以防泄漏关键配置
+- 支持 webhook 通知进度消息
 
 ## 前置条件
 
@@ -33,10 +35,23 @@ sudo apt install p7zip-full
 
 ## 常用命令示例
 
+- **加密配置文件**
+
+  ```bash
+  ./backupdbtool --config config.yaml encrypt -d encrypted.yaml -p password
+  ```
+  > 加密完成并测试成功后可删除原始 `config.yaml` 文件
+
 - **备份指定数据库**
 
   ```bash
   ./backupdbtool --config config.yaml backup <database_name>
+  ```
+
+  使用加密配置文件
+
+   ```bash
+  ./backupdbtool --config encrypted.yaml -p password backup <database_name>
   ```
 
 - **上传所有待上传备份文件**
@@ -45,10 +60,22 @@ sudo apt install p7zip-full
   ./backupdbtool --config config.yaml upload --all
   ```
 
+  使用加密配置文件
+
+   ```bash
+  ./backupdbtool --config encrypted.yaml -p password upload --all
+  ```
+
 - **上传单个备份文件**
 
   ```bash
   ./backupdbtool --config config.yaml upload --file /path/to/filename.ext
+  ```
+
+  使用加密配置文件
+
+   ```bash
+  ./backupdbtool --config encrypted.yaml -p password upload --file /path/to/filename.ext
   ```
 
 - **删除所有两天前的备份以减少云存储成本**
@@ -57,11 +84,24 @@ sudo apt install p7zip-full
   ./backupdbtool --config config.yaml delete --all
   ```
 
+  使用加密配置文件
+
+   ```bash
+  ./backupdbtool --config encrypted.yaml -p password delete --all
+  ```
+
 - **删除单个云存储文件**
 
   ```bash
   ./backupdbtool --config config.yaml delete --key key
   ```
+
+  使用加密配置文件
+
+   ```bash
+  ./backupdbtool --config encrypted.yaml -p password delete --key key
+  ```
+
   > key 为云存储中的完整路径，比如想删除下方 list 中的 config.yaml 则 key 为 db/config.yaml。
 
   > 完整示例: ./backupdbtool --config config.yaml delete --key db/config.yaml。
@@ -70,6 +110,13 @@ sudo apt install p7zip-full
   ```bash
   ./backupdbtool --config config.yaml list
   ```
+
+  使用加密配置文件
+
+   ```bash
+  ./backupdbtool --config encrypted.yaml -p password list
+  ```
+
   ![list](images/list.png)
 
 ## 定时任务（Cron）推荐配置
@@ -80,15 +127,34 @@ sudo apt install p7zip-full
   0 2 * * * /path/to/backupdbtool --config /path/to/config.yaml backup <database_name>
   ```
 
+  使用加密配置文件
+
+   ```bash
+  0 2 * * * /path/to/backupdbtool --config /path/to/encrypted.yaml -p password backup <database_name>
+  ```
+
+
 - **每日凌晨 2:30 上传所有待上传备份**
 
   ```bash
   30 2 * * * /path/to/backupdbtool --config /path/to/config.yaml upload --all
   ```
 
+  使用加密配置文件
+
+   ```bash
+  30 2 * * * /path/to/backupdbtool --config /path/to/encrypted.yaml -p password upload --all
+  ```
+
 - **每周日凌晨 3 点删除所有两天前的备份以减少云存储成本**
   ```bash
   0 3 * * 0 /path/to/backupdbtool --config /path/to/config.yaml delete --all
+  ```
+
+  使用加密配置文件
+
+   ```bash
+   0 3 * * 0 /path/to/backupdbtool --config /path/to/encrypted.yaml -p password delete --all
   ```
 
 > 请将 `/path/to/backupdbtool` 和 `/path/to/config.yaml` 替换为实际路径，`<database_name>` 替换为目标数据库名称。

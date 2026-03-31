@@ -5,10 +5,11 @@ use std::process;
 use anyhow::Result;
 use backupdbtool::cli::args::{Cli, Commands};
 use backupdbtool::cli::command::{backup_database, delete_from_cos, upload_to_cos};
-use backupdbtool::config::{CosProvider, get_all_config};
+use backupdbtool::config::{CosProvider, get_all_config, get_webhook};
 use backupdbtool::storage::CosItem;
 use backupdbtool::utils::{self, resolve_path};
 use clap::Parser;
+use std::path::PathBuf;
 use tracing::{error, info};
 
 #[tokio::main]
@@ -17,14 +18,33 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
     let cli = Cli::parse();
+
+    let command = &cli.command;
+
+    match command {
+        Commands::Version => {
+            println!("backupdbtool v{}", env!("CARGO_PKG_VERSION"));
+            return Ok(());
+        }
+
+        _ => {}
+    }
+
+    let config_path = cli.config.unwrap_or_else(|| {
+            error!("Configuration file path is required for this command. Please provide one using the --config option.");
+            process::exit(1);
+        });
     // 加载配置
-    let mut config = match get_all_config(&cli.config) {
+    let mut config = match get_all_config(&config_path, cli.password) {
         Ok(config) => config,
         Err(e) => {
             error!("Failed to load config: {}", e);
             anyhow::bail!(e);
         }
     };
+
+    let notify = get_webhook(&config);
+
     let result = resolve_path(&config.app.backup_dir.to_string_lossy());
     match result {
         Ok(path) => {
@@ -52,17 +72,29 @@ async fn main() -> Result<()> {
                 &database_name,
                 &app_config.get_backup_dir(),
                 &app_config.compress_password,
+                notify,
             )
             .await
         }
         Commands::Upload { file, all } => {
             info!("Starting upload to COS");
-            upload_to_cos(file, all, app_config, storage).await
+            upload_to_cos(file, all, app_config, storage, notify).await
         }
         Commands::Delete { key, all } => {
             info!("Starting delete yesterday before file from  COS");
             utils::cleanup_old_backups(&app_config.get_backup_dir()).await?;
             delete_from_cos(key, all, storage.as_ref()).await
+        }
+        Commands::Encrypt {
+            destination,
+            password,
+        } => {
+            info!("Starting encryption of YAML file");
+            backupdbtool::cli::command::encrypt_yaml_file(
+                &PathBuf::from(config_path),
+                &PathBuf::from(destination),
+                &password,
+            )
         }
         Commands::List => {
             let key_str = match &config.app.cos_provider {
@@ -76,9 +108,6 @@ async fn main() -> Result<()> {
             let _ = utils::list_table(files);
             Ok(())
         }
-        Commands::Version => {
-            println!("backupdbtool v{}", env!("CARGO_PKG_VERSION"));
-            Ok(())
-        }
+        Commands::Version => Ok(()),
     }
 }

@@ -1,5 +1,7 @@
+use crate::cli::command::decrypt_yaml_file;
 use crate::database::Database;
 use crate::database::{mysql::MySql, postgresql::PostgreSql};
+use crate::notify::webhook::WebHookNotify;
 use crate::storage::Storage;
 use crate::storage::aliyun_oss::AliyunOss;
 use crate::storage::local_storage::LocalStorage;
@@ -19,6 +21,7 @@ pub struct AllConfig {
     pub mysql: MySqlConfig,
     pub aliyun_oss: AliyunOssConfig,
     pub s3: S3OssConfig,
+    pub webhook: Option<WebHookConfig>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -69,6 +72,12 @@ pub struct MySqlConfig {
     pub port: u16,
     pub username: String,
     pub password: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct WebHookConfig {
+    pub url: String,
+    pub token: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq)]
@@ -137,28 +146,38 @@ impl AppConfig {
             CosProvider::TencentCos => {
                 let config = &config.tencent_cos;
                 let storage = TencentCos::new(config);
-                Arc::new(storage)
+                Arc::new(storage) as Arc<dyn Storage>
             }
             CosProvider::AliyunOss => {
                 let config = &config.aliyun_oss;
                 let storage = AliyunOss::new(config);
-                Arc::new(storage)
+                Arc::new(storage) as Arc<dyn Storage>
             }
             CosProvider::LocalStorage => {
                 let path = &config.app.get_backup_dir();
                 let storage = LocalStorage::new(path.to_str().unwrap()).await;
-                Arc::new(storage)
+                Arc::new(storage) as Arc<dyn Storage>
             }
             CosProvider::S3 => {
                 let config = &config.s3;
                 let storage = S3Oss::new(config);
-                Arc::new(storage)
+                Arc::new(storage) as Arc<dyn Storage>
             }
         }
     }
 }
 
-pub fn get_all_config(config_path: &str) -> anyhow::Result<AllConfig, ConfigError> {
+pub fn get_all_config(
+    config_path: &str,
+    password: Option<String>,
+) -> anyhow::Result<AllConfig, ConfigError> {
+    if let Some(pwd) = password {
+        // 如果提供了密码，尝试解密配置文件
+        let encrypted_path = PathBuf::from(config_path);
+        let config = decrypt_yaml_file(&encrypted_path, &pwd)
+            .map_err(|_e| ConfigError::NotFound("yaml file decrypt failed".to_string()))?;
+        return Ok(config);
+    }
     let config_builder = Config::builder()
         // 加载配置文件
         .add_source(File::with_name(config_path))
@@ -166,6 +185,14 @@ pub fn get_all_config(config_path: &str) -> anyhow::Result<AllConfig, ConfigErro
 
     let config = config_builder.try_deserialize()?;
     Ok(config)
+}
+
+pub fn get_webhook(config:&AllConfig)->Option<WebHookNotify>{
+    if let Some(webhook_config) = &config.webhook {
+        Some(WebHookNotify::new(webhook_config.url.clone(), webhook_config.token.clone()))
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]
@@ -213,6 +240,13 @@ mod tests {
             secret_key = "testkey"
             end_point = "ap-guangzhou"
             bucket = "testbucket"
+
+            [s3]      
+              secret_id = "AKIDuhLs"                     
+              secret_key = "dGnCj8"                       
+              end_point = "oss-cn-shanghai.aliyuncs.com"  
+              bucket = "bucket-1234567"                   
+              region = "ap-shanghai"                     
         "#;
 
         // 写入临时配置文件
@@ -220,7 +254,7 @@ mod tests {
         file.write_all(config_content.as_bytes()).unwrap();
 
         // 调用get_all_config
-        let config = get_all_config(file_path.to_str().unwrap()).unwrap();
+        let config = get_all_config(file_path.to_str().unwrap(), None).unwrap();
 
         // 断言配置内容
         assert_eq!(config.app.backup_dir, PathBuf::from("/tmp/dbbackup"));
@@ -238,5 +272,14 @@ mod tests {
         assert_eq!(config.postgresql.port, 5432);
         assert_eq!(config.postgresql.username, "user");
         assert_eq!(config.postgresql.password, "pass");
+
+        assert_eq!(config.s3.secret_id, "AKIDuhLs");
+        assert_eq!(config.s3.secret_key, "dGnCj8");
+        assert_eq!(
+            config.s3.end_point,
+            Some("oss-cn-shanghai.aliyuncs.com".to_string())
+        );
+        assert_eq!(config.s3.bucket, "bucket-1234567");
+        assert_eq!(config.s3.region, Some("ap-shanghai".to_string()));
     }
 }

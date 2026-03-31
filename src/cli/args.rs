@@ -9,7 +9,11 @@ pub struct Cli {
     pub command: Commands,
     /// Specific file for configuration
     #[arg(short, long)]
-    pub config: String,
+    pub config: Option<String>,
+
+    /// Specific password for decryption config file
+    #[arg(short, long)]
+    pub password: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -40,6 +44,17 @@ pub enum Commands {
         /// Delete all yesterday before files
         #[arg(short, long, default_value_t = false)]
         all: bool,
+    },
+
+    /// Encrypt a TOML configuration file
+    Encrypt {
+        /// Destination file for encrypted output
+        #[arg(short, long)]
+        destination: String,
+
+        /// Specific password for encryption
+        #[arg(short, long)]
+        password: String,
     },
 
     /// List available backups
