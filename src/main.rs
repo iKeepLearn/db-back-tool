@@ -79,7 +79,7 @@ async fn main() -> Result<()> {
         Commands::Delete { key, all } => {
             info!("Starting delete yesterday before file from  COS");
             utils::cleanup_old_backups(&app_config.get_backup_dir()).await?;
-            delete_from_cos(key, all, storage.as_ref()).await
+            delete_from_cos(key, all, storage.as_ref(),&app_config.cos_path).await
         }
         Commands::Encrypt {
             destination,

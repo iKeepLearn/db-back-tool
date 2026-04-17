@@ -15,9 +15,9 @@ pub async fn compress_and_encrypt(input_file: &Path, password: &str) -> Result<P
         .arg("-t7z")
         .arg("-m0=lzma2")
         .arg("-mhe=on") // 启用头部加密
-        .arg(format!("-p{}", password)) // 设置密码
         .arg(&output_path)
-        .arg(input_file);
+        .arg(input_file)
+        .env("7Z_PASSWORD", password);
 
     let status = cmd.status().await?;
 

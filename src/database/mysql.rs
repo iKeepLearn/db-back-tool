@@ -38,8 +38,8 @@ impl Database for MySql {
             .arg(self.port.to_string())
             .arg("-u")
             .arg(&self.username)
-            .arg(format!("-p{}", &self.password))
-            .arg(database_name);
+            .arg(database_name)
+            .env("MYSQL_PWD", &self.password);
 
         let output = cmd.output().await?;
 

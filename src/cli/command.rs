@@ -100,7 +100,7 @@ pub async fn upload_to_cos(
     Ok(())
 }
 
-pub async fn delete_from_cos(key: Option<String>, all: bool, storage: &dyn Storage) -> Result<()> {
+pub async fn delete_from_cos(key: Option<String>, all: bool, storage: &dyn Storage,prefix:&str) -> Result<()> {
     if let Some(key_str) = key {
         storage
             .delete(&key_str)
@@ -112,7 +112,7 @@ pub async fn delete_from_cos(key: Option<String>, all: bool, storage: &dyn Stora
         info!("File deleted successfully: {}", key_str);
     } else if all {
         let files = storage
-            .list("db")
+            .list(prefix)
             .await
             .map_err(|e| Error::StorageList(e.to_string()))?;
 
