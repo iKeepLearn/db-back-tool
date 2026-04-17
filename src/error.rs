@@ -30,20 +30,14 @@ pub enum Error {
     #[error("Storage error: {0}")]
     Storage(String),
 
-    #[error("Storage upload error for {path}: {source}")]
-    StorageUpload {
-        path: PathBuf,
-        source: String,
-    },
+    #[error("Storage upload error for {path}: {message}")]
+    StorageUpload { path: PathBuf, message: String },
 
     #[error("Storage list error: {0}")]
     StorageList(String),
 
-    #[error("Storage delete error for {key}: {source}")]
-    StorageDelete {
-        key: String,
-        source: String,
-    },
+    #[error("Storage delete error for {key}: {message}")]
+    StorageDelete { key: String, message: String },
 
     #[error("Notification error: {0}")]
     Notification(String),

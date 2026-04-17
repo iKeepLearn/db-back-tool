@@ -1,5 +1,5 @@
 // src/compression.rs
-use anyhow::Result;
+use crate::error::{Error, Result};
 // use sevenz_rust2::{compress_to_path_encrypted, Password};
 use std::path::{Path, PathBuf};
 use tokio::process::Command;
@@ -22,7 +22,7 @@ pub async fn compress_and_encrypt(input_file: &Path, password: &str) -> Result<P
     let status = cmd.status().await?;
 
     if !status.success() {
-        anyhow::bail!("7z compression failed");
+        return Err(Error::Compression("7z compression failed".to_string()));
     }
 
     Ok(output_path)

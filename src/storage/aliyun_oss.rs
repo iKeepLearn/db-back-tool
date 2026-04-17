@@ -1,5 +1,6 @@
 use super::CosItem;
 use crate::config::AliyunOssConfig;
+use crate::error::{Error, Result};
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use s3::{Bucket, Region, creds::Credentials};
@@ -34,10 +35,12 @@ pub struct AliyunOss {
 
 #[async_trait::async_trait]
 impl Storage for AliyunOss {
-    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<(), String> {
+    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<()> {
         let file_name = file_path
             .file_name()
-            .ok_or_else(|| format!("Invalid file path: {}", file_path.display()))?
+            .ok_or_else(|| {
+                Error::InvalidConfig(format!("Invalid file path: {}", file_path.display()))
+            })?
             .to_string_lossy();
 
         let s3_key = if cos_path.ends_with('/') {
@@ -47,33 +50,38 @@ impl Storage for AliyunOss {
         };
 
         // 读取文件内容
-        let content = std::fs::read(file_path)
-            .map_err(|e| format!("Failed to read file {}: {}", file_path.display(), e))?;
+        let content = std::fs::read(file_path).map_err(|e| Error::StorageUpload {
+            path: file_path.to_path_buf(),
+            message: format!("Failed to read file: {}", e),
+        })?;
 
         // 上传到 Aliyun Oss
         let res = self
             .client
             .put_object(&s3_key, &content)
             .await
-            .map_err(|e| format!("S3 upload failed: {}", e))?;
+            .map_err(|e| Error::StorageUpload {
+                path: file_path.to_path_buf(),
+                message: e.to_string(),
+            })?;
 
         if res.status_code() == 200 {
             info!("Successfully uploaded: {}", file_name,);
             Ok(())
         } else {
-            Err(format!(
-                "Aliyun oss upload failed with HTTP code: {}",
-                res.status_code()
-            ))
+            Err(Error::StorageUpload {
+                path: file_path.to_path_buf(),
+                message: format!("HTTP code: {}", res.status_code()),
+            })
         }
     }
 
-    async fn list(&self, key: &str) -> Result<Vec<CosItem>, String> {
+    async fn list(&self, key: &str) -> Result<Vec<CosItem>> {
         let result = self
             .client
             .list(key.to_string(), None)
             .await
-            .map_err(|e| format!("S3 list failed: {}", e))?;
+            .map_err(|e| Error::StorageList(e.to_string()))?;
 
         let mut all_items = Vec::new();
         for item in result {
@@ -107,21 +115,24 @@ impl Storage for AliyunOss {
         Ok(all_items)
     }
 
-    async fn delete(&self, key: &str) -> Result<(), String> {
+    async fn delete(&self, key: &str) -> Result<()> {
         let res = self
             .client
             .delete_object(key)
             .await
-            .map_err(|e| format!("Aliyun oss delete failed: {}", e))?;
+            .map_err(|e| Error::StorageDelete {
+                key: key.to_string(),
+                message: e.to_string(),
+            })?;
 
         if res.status_code() == 200 || res.status_code() == 204 {
             info!("Successfully deleted: {}", key);
             Ok(())
         } else {
-            Err(format!(
-                "Aliyun oss delete failed with HTTP code: {}",
-                res.status_code()
-            ))
+            Err(Error::StorageDelete {
+                key: key.to_string(),
+                message: format!("HTTP code: {}", res.status_code()),
+            })
         }
     }
 }

@@ -2,7 +2,8 @@ use aes_gcm::{
     Aes256Gcm, Key, Nonce,
     aead::{Aead, KeyInit},
 };
-use anyhow::Result;
+
+use crate::error::{Error, Result};
 use argon2::Argon2;
 use rand::{Rng, rng};
 use serde::{Deserialize, Serialize};
@@ -43,7 +44,7 @@ pub fn generate_key_from_password(password: &[u8], salt: &[u8]) -> Result<[u8; K
 
     argon2
         .hash_password_into(password, salt, &mut output_key)
-        .map_err(|e| anyhow::anyhow!("Failed to derive key from password: {}", e))?;
+        .map_err(|e| Error::Encryption(format!("Failed to derive key from password: {}", e)))?;
 
     Ok(output_key)
 }
@@ -59,7 +60,7 @@ pub fn encrypt_data(plaintext: &[u8], key: &[u8; KEY_LEN]) -> Result<Vec<u8>> {
     // Encrypt the data
     let ciphertext = cipher
         .encrypt(nonce, plaintext)
-        .map_err(|e| anyhow::anyhow!("Encryption failed: {}", e))?;
+        .map_err(|e| Error::Encryption(format!("Encryption failed: {}", e)))?;
 
     // Prepend the nonce to the ciphertext
     let mut result = nonce_bytes.to_vec();
@@ -71,7 +72,7 @@ pub fn encrypt_data(plaintext: &[u8], key: &[u8; KEY_LEN]) -> Result<Vec<u8>> {
 /// Decrypt data using AES-256-GCM
 pub fn decrypt_data(encrypted_data: &[u8], key: &[u8; KEY_LEN]) -> Result<Vec<u8>> {
     if encrypted_data.len() < NONCE_LEN {
-        anyhow::bail!("Encrypted data too short");
+        return Err(Error::Decryption("Encrypted data too short".to_string()));
     }
 
     // Extract nonce and ciphertext
@@ -82,10 +83,10 @@ pub fn decrypt_data(encrypted_data: &[u8], key: &[u8; KEY_LEN]) -> Result<Vec<u8
 
     // Decrypt the data
     let plaintext = cipher.decrypt(nonce, ciphertext).map_err(|e| {
-        anyhow::anyhow!(
+        Error::Decryption(format!(
             "Decryption failed - incorrect password or corrupted data: {}",
             e
-        )
+        ))
     })?;
 
     Ok(plaintext)

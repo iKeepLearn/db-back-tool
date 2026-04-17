@@ -2,10 +2,10 @@
 
 use std::process;
 
-use anyhow::Result;
 use backupdbtool::cli::args::{Cli, Commands};
 use backupdbtool::cli::command::{backup_database, delete_from_cos, upload_to_cos};
 use backupdbtool::config::{CosProvider, get_all_config, get_webhook};
+use backupdbtool::error::Result;
 use backupdbtool::storage::CosItem;
 use backupdbtool::utils::{self, resolve_path};
 use clap::Parser;
@@ -21,13 +21,9 @@ async fn main() -> Result<()> {
 
     let command = &cli.command;
 
-    match command {
-        Commands::Version => {
-            println!("backupdbtool v{}", env!("CARGO_PKG_VERSION"));
-            return Ok(());
-        }
-
-        _ => {}
+    if let Commands::Version = command {
+        println!("backupdbtool v{}", env!("CARGO_PKG_VERSION"));
+        return Ok(());
     }
 
     let config_path = cli.config.unwrap_or_else(|| {
@@ -39,7 +35,7 @@ async fn main() -> Result<()> {
         Ok(config) => config,
         Err(e) => {
             error!("Failed to load config: {}", e);
-            anyhow::bail!(e);
+            process::exit(1);
         }
     };
 
@@ -101,10 +97,7 @@ async fn main() -> Result<()> {
                 CosProvider::LocalStorage => "*.7z",
                 _ => app_config.cos_path.as_str(),
             };
-            let files: Vec<CosItem> = storage
-                .list(key_str)
-                .await
-                .map_err(|e| anyhow::anyhow!(e))?;
+            let files: Vec<CosItem> = storage.list(key_str).await?;
             let _ = utils::list_table(files);
             Ok(())
         }

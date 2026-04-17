@@ -45,7 +45,7 @@ impl WebHookNotify {
             Client::new()
         };
         WebHookNotify {
-            client: client,
+            client,
             url: url.into(),
             token,
         }

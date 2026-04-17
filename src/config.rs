@@ -1,13 +1,14 @@
 use crate::cli::command::decrypt_yaml_file;
 use crate::database::Database;
 use crate::database::{mysql::MySql, postgresql::PostgreSql};
+use crate::error::{Error, Result};
 use crate::notify::webhook::WebHookNotify;
 use crate::storage::Storage;
 use crate::storage::aliyun_oss::AliyunOss;
 use crate::storage::local_storage::LocalStorage;
 use crate::storage::s3_compatible::S3Oss;
 use crate::storage::tencent_cos::TencentCos;
-use config::{Config, ConfigError, File};
+use config::{Config, File};
 use serde::Deserialize;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -167,15 +168,15 @@ impl AppConfig {
     }
 }
 
-pub fn get_all_config(
-    config_path: &str,
-    password: Option<String>,
-) -> anyhow::Result<AllConfig, ConfigError> {
+pub fn get_all_config(config_path: &str, password: Option<String>) -> Result<AllConfig> {
     if let Some(pwd) = password {
         // 如果提供了密码，尝试解密配置文件
         let encrypted_path = PathBuf::from(config_path);
-        let config = decrypt_yaml_file(&encrypted_path, &pwd)
-            .map_err(|_e| ConfigError::NotFound("yaml file decrypt failed".to_string()))?;
+        let config = decrypt_yaml_file(&encrypted_path, &pwd).map_err(|_e| {
+            Error::Config(config::ConfigError::NotFound(
+                "yaml file decrypt failed".to_string(),
+            ))
+        })?;
         return Ok(config);
     }
     let config_builder = Config::builder()
@@ -187,12 +188,10 @@ pub fn get_all_config(
     Ok(config)
 }
 
-pub fn get_webhook(config:&AllConfig)->Option<WebHookNotify>{
-    if let Some(webhook_config) = &config.webhook {
-        Some(WebHookNotify::new(webhook_config.url.clone(), webhook_config.token.clone()))
-    } else {
-        None
-    }
+pub fn get_webhook(config: &AllConfig) -> Option<WebHookNotify> {
+    config.webhook.as_ref().map(|webhook_config| {
+        WebHookNotify::new(webhook_config.url.clone(), webhook_config.token.clone())
+    })
 }
 
 #[cfg(test)]

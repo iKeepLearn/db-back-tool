@@ -1,5 +1,5 @@
+use crate::error::{Error, Result};
 use crate::storage::{CosItem, Storage};
-use anyhow::Result;
 use chrono::{DateTime, Utc};
 use futures::future::join_all;
 use glob::glob;
@@ -11,7 +11,7 @@ use tabled::Table;
 use tokio::task::JoinHandle;
 use tracing::{error, info};
 
-pub fn resolve_path(path_str: &str) -> Result<PathBuf, String> {
+pub fn resolve_path(path_str: &str) -> Result<PathBuf> {
     let resolved_path = if path_str.starts_with("~") {
         let expanded_str = shellexpand::tilde(path_str);
         PathBuf::from(expanded_str.to_string())
@@ -21,7 +21,7 @@ pub fn resolve_path(path_str: &str) -> Result<PathBuf, String> {
 
     if resolved_path.exists() {
         std::fs::canonicalize(&resolved_path)
-            .map_err(|e| format!("Could not canonicalize path: {}", e))
+            .map_err(|e| Error::PathResolution(format!("Could not canonicalize path: {}", e)))
     } else {
         Ok(resolved_path)
     }
@@ -40,20 +40,20 @@ pub async fn upload_all_backups(
     backup_dir: &Path,
     storage: Arc<dyn Storage>,
     cos_path: &str,
-) -> Result<(), String> {
+) -> Result<()> {
     let pattern = backup_dir.join("*.7z").to_string_lossy().to_string();
 
-    let files = glob(&pattern).map_err(|e| e.to_string())?;
+    let files = glob(&pattern).map_err(|e| Error::PathResolution(e.to_string()))?;
 
     let files: Vec<PathBuf> = files.into_iter().filter_map(|file| file.ok()).collect();
 
-    let mut tasks: Vec<JoinHandle<Result<(), String>>> = Vec::with_capacity(files.len());
+    let mut tasks: Vec<JoinHandle<Result<()>>> = Vec::with_capacity(files.len());
 
     let cos_path = cos_path.to_owned();
     for file in files {
         let storage = storage.clone();
         let cos_path = cos_path.clone();
-        let handle: JoinHandle<Result<(), String>> =
+        let handle: JoinHandle<Result<()>> =
             tokio::spawn(async move { storage.upload(&file, &cos_path).await });
         tasks.push(handle);
     }
@@ -65,7 +65,7 @@ pub async fn upload_all_backups(
 pub async fn cleanup_old_backups(backup_dir: &Path) -> Result<()> {
     let pattern = backup_dir.join("*.7z").to_string_lossy().to_string();
 
-    let files = glob(&pattern)?;
+    let files = glob(&pattern).map_err(|e| Error::PathResolution(e.to_string()))?;
 
     for entry in files {
         match entry {

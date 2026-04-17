@@ -1,5 +1,6 @@
 use super::Database;
 use crate::config::MySqlConfig;
+use crate::error::{Error, Result};
 use chrono::Utc;
 use serde::Deserialize;
 use std::ops::Deref;
@@ -20,7 +21,7 @@ impl Deref for MySql {
 
 #[async_trait::async_trait]
 impl Database for MySql {
-    async fn backup(&self, database_name: &str, backup_dir: &Path) -> anyhow::Result<PathBuf> {
+    async fn backup(&self, database_name: &str, backup_dir: &Path) -> Result<PathBuf> {
         let backup_filename = format!(
             "{}_{}.sql",
             database_name,
@@ -43,11 +44,11 @@ impl Database for MySql {
         let output = cmd.output().await?;
 
         if !output.status.success() {
-            anyhow::bail!(
+            return Err(Error::DatabaseBackup(format!(
                 "mysqldump failed for database {}: {}",
                 database_name,
                 String::from_utf8_lossy(&output.stderr)
-            );
+            )));
         }
 
         // 确保备份目录存在

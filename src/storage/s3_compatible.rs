@@ -1,5 +1,6 @@
 use super::CosItem;
 use crate::config::S3OssConfig;
+use crate::error::{Error, Result};
 use crate::storage::Storage;
 use chrono::{DateTime, Utc};
 use s3::{Bucket, Region, creds::Credentials};
@@ -35,10 +36,12 @@ pub struct S3Oss {
 
 #[async_trait::async_trait]
 impl Storage for S3Oss {
-    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<(), String> {
+    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<()> {
         let file_name = file_path
             .file_name()
-            .ok_or_else(|| format!("Invalid file path: {}", file_path.display()))?
+            .ok_or_else(|| {
+                Error::InvalidConfig(format!("Invalid file path: {}", file_path.display()))
+            })?
             .to_string_lossy();
 
         let s3_key = if cos_path.ends_with('/') {
@@ -50,14 +53,20 @@ impl Storage for S3Oss {
         // 读取文件内容
         let content = tokio::fs::read(file_path)
             .await
-            .map_err(|e| format!("Failed to read file {}: {}", file_path.display(), e))?;
+            .map_err(|e| Error::StorageUpload {
+                path: file_path.to_path_buf(),
+                message: format!("Failed to read file: {}", e),
+            })?;
 
         // 上传到 S3
         let res = self
             .bucket
             .put_object(&s3_key, &content)
             .await
-            .map_err(|e| format!("S3 upload failed: {}", e))?;
+            .map_err(|e| Error::StorageUpload {
+                path: file_path.to_path_buf(),
+                message: e.to_string(),
+            })?;
 
         if res.status_code() == 200 {
             info!(
@@ -66,19 +75,19 @@ impl Storage for S3Oss {
             );
             Ok(())
         } else {
-            Err(format!(
-                "S3 upload failed with HTTP code: {}",
-                res.status_code()
-            ))
+            Err(Error::StorageUpload {
+                path: file_path.to_path_buf(),
+                message: format!("HTTP code: {}", res.status_code()),
+            })
         }
     }
 
-    async fn list(&self, prefix: &str) -> Result<Vec<CosItem>, String> {
+    async fn list(&self, prefix: &str) -> Result<Vec<CosItem>> {
         let result = self
             .bucket
             .list(prefix.to_string(), None)
             .await
-            .map_err(|e| format!("S3 list failed: {}", e))?;
+            .map_err(|e| Error::StorageList(e.to_string()))?;
 
         let mut all_items = Vec::new();
         for item in result {
@@ -112,21 +121,24 @@ impl Storage for S3Oss {
         Ok(all_items)
     }
 
-    async fn delete(&self, key: &str) -> Result<(), String> {
+    async fn delete(&self, key: &str) -> Result<()> {
         let res = self
             .bucket
             .delete_object(key)
             .await
-            .map_err(|e| format!("S3 delete failed: {}", e))?;
+            .map_err(|e| Error::StorageDelete {
+                key: key.to_string(),
+                message: e.to_string(),
+            })?;
 
         if res.status_code() == 200 || res.status_code() == 204 {
             info!("Successfully deleted: s3://{}/{}", self.bucket_name, key);
             Ok(())
         } else {
-            Err(format!(
-                "S3 delete failed with HTTP code: {}",
-                res.status_code()
-            ))
+            Err(Error::StorageDelete {
+                key: key.to_string(),
+                message: format!("HTTP code: {}", res.status_code()),
+            })
         }
     }
 }
@@ -146,7 +158,7 @@ impl S3Oss {
             }
         } else {
             // 对于 AWS S3，使用标准区域
-            region_config.parse().expect("")
+            region_config.parse().expect("invalid region")
         };
 
         // 创建凭据

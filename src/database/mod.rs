@@ -1,9 +1,9 @@
 pub mod mysql;
 pub mod postgresql;
-
+use crate::error::Result;
 use std::path::{Path, PathBuf};
 
 #[async_trait::async_trait]
 pub trait Database {
-    async fn backup(&self, database_name: &str, backup_dir: &Path) -> anyhow::Result<PathBuf>;
+    async fn backup(&self, database_name: &str, backup_dir: &Path) -> Result<PathBuf>;
 }

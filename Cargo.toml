@@ -13,7 +13,6 @@ name = "backupdbtool"
 [dependencies]
 tokio = { version = "1.52.1", features = ["full"] }
 chrono = { version = "0.4.44", features = ["serde"] }
-anyhow = "1.0.102"
 thiserror = "2.0.18"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"

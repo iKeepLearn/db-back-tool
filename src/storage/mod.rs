@@ -1,4 +1,4 @@
-use anyhow::Result;
+use crate::error::Result;
 use chrono::{DateTime, Utc};
 use humansize::{DECIMAL, format_size};
 use serde::{Deserialize, Serialize};
@@ -14,9 +14,9 @@ pub mod tencent_cos;
 
 #[async_trait::async_trait]
 pub trait Storage: Send + Sync {
-    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<(), String>;
-    async fn list(&self, key: &str) -> Result<Vec<CosItem>, String>;
-    async fn delete(&self, backup_name: &str) -> Result<(), String>;
+    async fn upload(&self, file_path: &Path, cos_path: &str) -> Result<()>;
+    async fn list(&self, key: &str) -> Result<Vec<CosItem>>;
+    async fn delete(&self, backup_name: &str) -> Result<()>;
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

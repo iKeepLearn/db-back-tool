@@ -1,6 +1,8 @@
 use super::CosItem;
-use crate::{config::AppConfig, storage::Storage, utils::resolve_path};
-use anyhow::Result;
+use crate::config::AppConfig;
+use crate::error::{Error, Result};
+use crate::storage::Storage;
+use crate::utils::resolve_path;
 use chrono::{DateTime, Utc};
 use glob::glob;
 use serde::{Deserialize, Serialize};
@@ -32,43 +34,33 @@ pub struct LocalStorage {
 
 #[async_trait::async_trait]
 impl Storage for LocalStorage {
-    async fn upload(&self, _file_path: &Path, _cos_path: &str) -> Result<(), String> {
-        // // 获取文件名
-        // let file_name = file_path
-        //     .file_name()
-        //     .ok_or_else(|| format!("Invalid file path: {}", file_path.display()))?
-        //     .to_string_lossy();
-
-        // // 构建目标路径
-        // let target_path = self.base_path.join(&file_name.as_ref());
-        // fs::copy(file_path, target_path.as_path())
-        //     .await
-        //     .map_err(|e| format!("Failed to copy file: {}", e))?;
-        // info!(
-        //     "Successfully uploaded: {} to {}",
-        //     file_name,
-        //     target_path.display()
-        // );
+    async fn upload(&self, _file_path: &Path, _cos_path: &str) -> Result<()> {
         Ok(())
     }
 
-    async fn list(&self, key: &str) -> Result<Vec<CosItem>, String> {
+    async fn list(&self, key: &str) -> Result<Vec<CosItem>> {
         let pattern = self.base_path.join(key).to_string_lossy().to_string();
         let mut items = Vec::new();
 
-        let files = glob(&pattern).map_err(|e| e.to_string())?;
+        let files = glob(&pattern).map_err(|e| Error::StorageList(e.to_string()))?;
 
         for path in files.flatten() {
-            let metadata = fs::metadata(&path).await.map_err(|e| e.to_string())?;
+            let metadata = fs::metadata(&path)
+                .await
+                .map_err(|e| Error::StorageList(e.to_string()))?;
             if metadata.is_file() {
                 let last_modified: DateTime<Utc> = metadata
                     .modified()
-                    .map_err(|e| format!("Failed to get modification time: {}", e))?
+                    .map_err(|e| {
+                        Error::StorageList(format!("Failed to get modification time: {}", e))
+                    })?
                     .into();
 
                 let file_name = path
                     .file_name()
-                    .ok_or_else(|| format!("Invalid file path: {}", path.display()))?
+                    .ok_or_else(|| {
+                        Error::StorageList(format!("Invalid file path: {}", path.display()))
+                    })?
                     .to_string_lossy();
 
                 items.push(LocalStorageItem {
@@ -79,22 +71,24 @@ impl Storage for LocalStorage {
             }
         }
 
-        // 按最后修改时间排序（最新的在前）
         items.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
 
         Ok(items.into_iter().map(CosItem::from).collect())
     }
 
-    async fn delete(&self, key: &str) -> Result<(), String> {
+    async fn delete(&self, key: &str) -> Result<()> {
         let target_path = self.base_path.join(key);
 
         if !target_path.exists() {
-            return Err(format!("File not found: {}", target_path.display()));
+            return Err(Error::FileNotFound(target_path));
         }
 
         fs::remove_file(&target_path)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| Error::StorageDelete {
+                key: key.to_string(),
+                message: e.to_string(),
+            })?;
 
         info!("Successfully deleted: {}", target_path.display());
         Ok(())
@@ -127,18 +121,12 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let storage = LocalStorage::new(temp_dir.path().to_str().unwrap()).await;
 
-        // 创建测试文件
         let test_file = temp_dir.path().join("test.txt");
         let mut file = File::create(&test_file).await.unwrap();
         file.write_all(b"test content").await.unwrap();
 
-        // 测试上传
         let result = storage.upload(&test_file, "uploads/").await;
         assert!(result.is_ok());
-
-        // 检查文件是否被复制
-        let target_file = temp_dir.path().join("test.txt");
-        assert!(target_file.exists());
     }
 
     #[tokio::test]
@@ -146,14 +134,11 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let storage = LocalStorage::new(temp_dir.path().to_str().unwrap()).await;
 
-        // 创建测试文件
         let test_file = temp_dir.path().join("test.txt");
         let mut file = File::create(&test_file).await.unwrap();
         file.write_all(b"test content").await.unwrap();
 
-        // 测试列表
         let items = storage.list("*.txt").await.unwrap();
-        println!("items {:?}", items);
         assert!(!items.is_empty());
         assert_eq!(items[0].key, "test.txt");
     }
@@ -163,12 +148,10 @@ mod tests {
         let temp_dir = tempdir().unwrap();
         let storage = LocalStorage::new(temp_dir.path().to_str().unwrap()).await;
 
-        // 创建测试文件
         let test_file = temp_dir.path().join("test.txt");
         let mut file = File::create(&test_file).await.unwrap();
         file.write_all(b"test content").await.unwrap();
 
-        // 测试删除
         let result = storage.delete("test.txt").await;
         assert!(result.is_ok());
         assert!(!test_file.exists());
