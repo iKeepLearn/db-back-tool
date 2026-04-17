@@ -233,6 +233,7 @@ dependencies = [
  "shellexpand",
  "tabled",
  "tempfile",
+ "thiserror 2.0.16",
  "tokio",
  "tracing",
  "tracing-subscriber",

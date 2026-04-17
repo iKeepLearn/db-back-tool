@@ -6,3 +6,6 @@ pub mod database;
 pub mod storage;
 pub mod utils;
 pub mod notify;
+pub mod error;
+
+pub use error::{Error, Result};
