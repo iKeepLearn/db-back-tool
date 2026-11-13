@@ -71,8 +71,7 @@ impl Storage for LocalStorage {
             }
         }
 
-        items.sort_by(|a, b| b.last_modified.cmp(&a.last_modified));
-
+        items.sort_by_key(|a| std::cmp::Reverse(a.last_modified));
         Ok(items.into_iter().map(CosItem::from).collect())
     }
 

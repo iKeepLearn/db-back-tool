@@ -51,15 +51,17 @@ pub fn generate_key_from_password(password: &[u8], salt: &[u8]) -> Result<[u8; K
 
 /// Encrypt data using AES-256-GCM
 pub fn encrypt_data(plaintext: &[u8], key: &[u8; KEY_LEN]) -> Result<Vec<u8>> {
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
+    let key = Key::<Aes256Gcm>::from(*key);
+    let cipher = Aes256Gcm::new(&key);
 
     // Generate a random nonce
     let nonce_bytes = generate_nonce_bytes();
-    let nonce = Nonce::from_slice(&nonce_bytes);
+    let nonce = Nonce::try_from(nonce_bytes.as_slice())
+        .map_err(|_| Error::Decryption("Invalid nonce length".to_string()))?;
 
     // Encrypt the data
     let ciphertext = cipher
-        .encrypt(nonce, plaintext)
+        .encrypt(&nonce, plaintext)
         .map_err(|e| Error::Encryption(format!("Encryption failed: {}", e)))?;
 
     // Prepend the nonce to the ciphertext
@@ -77,12 +79,13 @@ pub fn decrypt_data(encrypted_data: &[u8], key: &[u8; KEY_LEN]) -> Result<Vec<u8
 
     // Extract nonce and ciphertext
     let (nonce_bytes, ciphertext) = encrypted_data.split_at(NONCE_LEN);
-    let nonce = Nonce::from_slice(nonce_bytes);
+    let nonce = Nonce::try_from(nonce_bytes)
+        .map_err(|_| Error::Decryption("Invalid nonce length".to_string()))?;
 
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(key));
+    let cipher = Aes256Gcm::new(&Key::<Aes256Gcm>::from(*key));
 
     // Decrypt the data
-    let plaintext = cipher.decrypt(nonce, ciphertext).map_err(|e| {
+    let plaintext = cipher.decrypt(&nonce, ciphertext).map_err(|e| {
         Error::Decryption(format!(
             "Decryption failed - incorrect password or corrupted data: {}",
             e

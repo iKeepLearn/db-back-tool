@@ -146,13 +146,14 @@ impl AliyunOss {
         };
 
         // 创建凭据
-        let credentials = Credentials {
-            access_key: Some(config.secret_id.to_string()),
-            secret_key: Some(config.secret_key.to_string()),
-            security_token: None,
-            session_token: None,
-            expiration: None,
-        };
+        let credentials = Credentials::new(
+            Some(&config.secret_id),
+            Some(&config.secret_key),
+            None,
+            None,
+            None,
+        )
+        .expect("create s3 credentials failed");
 
         // 创建存储桶实例
         let bucket = Bucket::new(&config.bucket, region, credentials)
